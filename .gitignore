@@ -14,3 +14,6 @@ __pycache__/
 
 # Local Claude settings (permissions, not shared)
 .claude/settings.local.json
+
+# Local design docs
+docs/
