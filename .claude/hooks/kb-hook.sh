@@ -44,7 +44,7 @@ for k, v in m.items():
         status="missing"
         stored_hash=""
         if [ -n "$manifest_data" ]; then
-            line=$(echo "$manifest_data" | grep "^${filename}	" || echo "")
+            line=$(echo "$manifest_data" | grep "^${filename}"$'\t' || echo "")
             if [ -n "$line" ]; then
                 status=$(echo "$line" | cut -f2)
                 stored_hash=$(echo "$line" | cut -f3)

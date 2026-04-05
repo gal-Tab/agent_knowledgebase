@@ -14,16 +14,22 @@ fi
 INPUT="$1"
 OUTPUT="${2:-}"
 
+# Use repomix if installed, fall back to npx
+REPOMIX="repomix"
 if ! command -v repomix &>/dev/null; then
-    echo "Error: repomix is not installed. Run: npm install -g repomix" >&2
-    exit 1
+    if command -v npx &>/dev/null; then
+        REPOMIX="npx -y repomix"
+    else
+        echo "Error: repomix is not installed and npx not available. Run: npm install -g repomix" >&2
+        exit 1
+    fi
 fi
 
 if [ -n "$OUTPUT" ]; then
     if [[ "$INPUT" == http* ]]; then
-        repomix --remote "$INPUT" --style markdown --output "$OUTPUT"
+        $REPOMIX --remote "$INPUT" --style markdown --output "$OUTPUT"
     else
-        repomix "$INPUT" --style markdown --output "$OUTPUT"
+        $REPOMIX "$INPUT" --style markdown --output "$OUTPUT"
     fi
 else
     # Write to temp file then cat (repomix requires --output)
@@ -31,12 +37,12 @@ else
     trap "rm -f $TMPFILE" EXIT
 
     if [[ "$INPUT" == http* ]]; then
-        if ! repomix --remote "$INPUT" --style markdown --output "$TMPFILE"; then
+        if ! $REPOMIX --remote "$INPUT" --style markdown --output "$TMPFILE"; then
             echo "Error: repomix failed for $INPUT" >&2
             exit 1
         fi
     else
-        if ! repomix "$INPUT" --style markdown --output "$TMPFILE"; then
+        if ! $REPOMIX "$INPUT" --style markdown --output "$TMPFILE"; then
             echo "Error: repomix failed for $INPUT" >&2
             exit 1
         fi

@@ -1,42 +1,21 @@
 # LLM Wiki Agent
 
-A Claude Code project agent that maintains a **compiled markdown wiki** as a knowledge base. Drop a file, ask a question — the wiki builds itself.
+**Give your Claude Code agent a persistent, structured memory.** Drop PDFs, markdown files, or git repos into a folder — the agent automatically extracts, compiles, and maintains a structured wiki. Ask domain questions and get answers grounded in your sources, with cross-references across everything you've fed it.
 
-No plugins. No frameworks. No RAG. Just `CLAUDE.md` + hooks + a few extraction tools.
+### What This Agent Does
+
+- **Automatic ingestion:** Drop a file into `raw/` — the agent detects it, extracts clean markdown, and compiles structured wiki pages. No commands needed.
+- **Compiled knowledge, not raw search:** Sources are synthesized into interconnected pages (entities, concepts, comparisons) — not just indexed. The wiki gets smarter with every source.
+- **Domain questions from your sources:** Ask a question and the agent consults the wiki first, citing your actual sources rather than relying on general knowledge alone.
+- **Cross-referencing:** Entities and concepts are linked across sources automatically. Contradictions between sources are flagged inline.
+- **Compounding loop:** Valuable query answers can be filed back into the wiki, enriching it over time.
+- **Session persistence:** The agent remembers what happened last session, what's pending, and picks up where it left off.
 
 <p align="center">
   <img src="architecture.svg" alt="LLM Wiki Agent Architecture" width="820" />
 </p>
 
-> Interactive version: [`llm-wiki-architecture.jsx`](llm-wiki-architecture.jsx) (React component, dark/light theme support)
-
 ---
-
-## How It Works
-
-**Two human actions:**
-
-1. Drop a file into `raw/` (PDF, markdown, or tell the agent a repo URL)
-2. Ask a question
-
-**Everything else is automatic:**
-
-- Hooks detect new files on session start and on every prompt
-- Extraction tools convert sources to clean markdown
-- The agent compiles structured wiki pages (sources, entities, concepts, comparisons)
-- Domain questions are answered by consulting the wiki
-- Valuable answers can be filed back into the wiki (compounding loop)
-- Git commits track every change
-
-## Architecture
-
-```
-L2: BEHAVIOR  — wiki-schema.md (domain rules, pluggable per project)
-L1: KNOWLEDGE — raw/ → extract → compile → wiki/ (the compiled wiki)
-L0: INFRA     — hooks + extraction tools + git
-```
-
-The engine (`CLAUDE.md` + hooks + tools) is generic. The domain rules (`wiki-schema.md`) are the only file you customize per project.
 
 ## Quick Start
 
@@ -54,6 +33,31 @@ cp ~/papers/interesting-paper.pdf raw/
 # Start Claude Code — the agent takes it from here
 claude
 ```
+
+## How It Works
+
+**Two human actions:**
+
+1. Drop a file into `raw/` (PDF, markdown, or tell the agent a repo URL)
+2. Ask a question
+
+**Everything else is automatic:**
+
+- Hooks detect new files on session start and on every prompt
+- Extraction tools convert sources to clean markdown
+- The agent compiles structured wiki pages (sources, entities, concepts, comparisons)
+- Domain questions are answered by consulting the wiki
+- Git commits track every change with structured messages
+
+## Architecture
+
+```
+L2: BEHAVIOR  — wiki-schema.md (domain rules, pluggable per project)
+L1: KNOWLEDGE — raw/ → extract → compile → wiki/ (the compiled wiki)
+L0: INFRA     — hooks + extraction tools + git
+```
+
+The engine (`CLAUDE.md` + hooks + tools) is generic. The domain rules (`wiki-schema.md`) are the only file you customize per project.
 
 ## File Structure
 
@@ -116,8 +120,8 @@ Adding a format = one extraction script + one line in CLAUDE.md.
 
 | Wiki Size | Strategy |
 |-----------|----------|
-| 0–100 pages | Flat `index.md`, agent reads it in full |
-| 100–300 pages | Auto-splits into category sub-indexes |
+| 0-100 pages | Flat `index.md`, agent reads it in full |
+| 100-300 pages | Auto-splits into category sub-indexes |
 | 300+ pages | `grep`-based search before reading indexes |
 
 The agent handles tier transitions automatically during compilation.

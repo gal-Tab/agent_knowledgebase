@@ -19,12 +19,16 @@ fi
 
 # Install Python dependencies
 echo "Installing Python dependencies..."
-pip install pymupdf4llm 2>/dev/null || pip3 install pymupdf4llm
+pip3 install --user pymupdf4llm 2>/dev/null \
+    || pip install --user pymupdf4llm 2>/dev/null \
+    || pip3 install pymupdf4llm 2>/dev/null \
+    || { echo "Warning: Could not install pymupdf4llm. Try: pip3 install --user pymupdf4llm" >&2; }
 
-# Install repomix if npm is available
+# Install repomix if npm is available (use npx as fallback)
 if command -v npm &>/dev/null; then
     echo "Installing repomix..."
-    npm install -g repomix
+    npm install -g repomix 2>/dev/null \
+        || { echo "Note: Could not install repomix globally. npx will be used as fallback." >&2; }
 fi
 
 # Create directory structure
