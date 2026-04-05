@@ -1,0 +1,16 @@
+# Extracted files (regenerated from raw sources)
+raw/.extracted/
+
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+
+# IDE
+.idea/
+
+# OS
+.DS_Store
+
+# Local Claude settings (permissions, not shared)
+.claude/settings.local.json
