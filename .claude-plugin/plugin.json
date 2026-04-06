@@ -13,8 +13,5 @@
     "pdf",
     "research",
     "compilation"
-  ],
-  "hooks": [
-    "./hooks/hooks.json"
   ]
 }
