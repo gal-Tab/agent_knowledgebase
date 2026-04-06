@@ -1,0 +1,208 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 820" width="1200" height="820">
+  <defs>
+    <style>
+      text { font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; }
+      .title { font-size: 22px; font-weight: 700; fill: #1E293B; }
+      .phase-label { font-size: 15px; font-weight: 700; fill: #FFFFFF; letter-spacing: 1px; }
+      .step-label { font-size: 13px; font-weight: 600; fill: #1E293B; }
+      .step-desc { font-size: 11px; fill: #64748B; }
+      .badge { font-size: 10px; font-weight: 700; fill: #FFFFFF; }
+      .lane-label { font-size: 11px; font-weight: 600; fill: #94A3B8; letter-spacing: 0.5px; }
+      .note { font-size: 10px; fill: #94A3B8; font-style: italic; }
+    </style>
+    <!-- Arrow marker -->
+    <marker id="arrow" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto-start-auto">
+      <path d="M 0 0 L 10 3.5 L 0 7 z" fill="#94A3B8"/>
+    </marker>
+    <marker id="arrow-blue" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto-start-auto">
+      <path d="M 0 0 L 10 3.5 L 0 7 z" fill="#3B82F6"/>
+    </marker>
+    <marker id="arrow-green" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto-start-auto">
+      <path d="M 0 0 L 10 3.5 L 0 7 z" fill="#10B981"/>
+    </marker>
+    <!-- Drop shadow filter -->
+    <filter id="shadow" x="-4%" y="-4%" width="108%" height="112%">
+      <feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.08"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="820" rx="12" fill="#F8FAFC"/>
+
+  <!-- Title -->
+  <text x="600" y="40" text-anchor="middle" class="title">KB Plugin Flow</text>
+  <text x="600" y="58" text-anchor="middle" class="note">llm-wiki-agent: drop files, compile, query</text>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- PHASE HEADERS                               -->
+  <!-- ═══════════════════════════════════════════ -->
+
+  <!-- SETUP header -->
+  <rect x="40" y="80" width="240" height="32" rx="6" fill="#6366F1"/>
+  <text x="160" y="101" text-anchor="middle" class="phase-label">SETUP</text>
+  <text x="160" y="130" text-anchor="middle" class="note">one-time per project</text>
+
+  <!-- BUILD header -->
+  <rect x="340" y="80" width="480" height="32" rx="6" fill="#3B82F6"/>
+  <text x="580" y="101" text-anchor="middle" class="phase-label">BUILD</text>
+  <text x="580" y="130" text-anchor="middle" class="note">each time you add sources</text>
+
+  <!-- QUERY header -->
+  <rect x="880" y="80" width="280" height="32" rx="6" fill="#10B981"/>
+  <text x="1020" y="101" text-anchor="middle" class="phase-label">QUERY</text>
+  <text x="1020" y="130" text-anchor="middle" class="note">anytime, auto-triggered</text>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- LANE LABELS (left side)                     -->
+  <!-- ═══════════════════════════════════════════ -->
+
+  <text x="20" y="200" class="lane-label" transform="rotate(-90,20,200)">YOU</text>
+  <line x1="36" y1="150" x2="36" y2="330" stroke="#E2E8F0" stroke-width="1"/>
+
+  <text x="20" y="430" class="lane-label" transform="rotate(-90,20,430)">HOOK</text>
+  <line x1="36" y1="370" x2="36" y2="490" stroke="#E2E8F0" stroke-width="1"/>
+
+  <text x="20" y="620" class="lane-label" transform="rotate(-90,20,620)">AGENT</text>
+  <line x1="36" y1="530" x2="36" y2="780" stroke="#E2E8F0" stroke-width="1"/>
+
+  <!-- Horizontal lane separators -->
+  <line x1="40" y1="350" x2="1160" y2="350" stroke="#E2E8F0" stroke-width="1" stroke-dasharray="6,4"/>
+  <line x1="40" y1="510" x2="1160" y2="510" stroke="#E2E8F0" stroke-width="1" stroke-dasharray="6,4"/>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- SETUP COLUMN                                -->
+  <!-- ═══════════════════════════════════════════ -->
+
+  <!-- S1: /kb-init -->
+  <rect x="60" y="165" width="200" height="60" rx="8" fill="#FFFFFF" stroke="#6366F1" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="60" y="165" width="54" height="20" rx="4" fill="#6366F1"/>
+  <text x="87" y="179" text-anchor="middle" class="badge">USER</text>
+  <text x="160" y="199" text-anchor="middle" class="step-label">/kb-init</text>
+  <text x="160" y="215" text-anchor="middle" class="step-desc">creates scaffold + tools</text>
+
+  <!-- Arrow S1 → S2 -->
+  <line x1="160" y1="225" x2="160" y2="255" stroke="#94A3B8" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- S2: Edit wiki-schema -->
+  <rect x="60" y="260" width="200" height="55" rx="8" fill="#FFFFFF" stroke="#6366F1" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="60" y="260" width="54" height="20" rx="4" fill="#6366F1"/>
+  <text x="87" y="274" text-anchor="middle" class="badge">USER</text>
+  <text x="160" y="293" text-anchor="middle" class="step-label">Edit wiki-schema.md</text>
+  <text x="160" y="308" text-anchor="middle" class="step-desc">describe your domain</text>
+
+  <!-- Arrow Setup → Build (horizontal) -->
+  <path d="M 260 290 Q 300 290 340 200" stroke="#94A3B8" stroke-width="1.5" fill="none" marker-end="url(#arrow)" stroke-dasharray="5,3"/>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- BUILD COLUMN                                -->
+  <!-- ═══════════════════════════════════════════ -->
+
+  <!-- B1: Drop files -->
+  <rect x="360" y="165" width="200" height="60" rx="8" fill="#FFFFFF" stroke="#3B82F6" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="360" y="165" width="54" height="20" rx="4" fill="#3B82F6"/>
+  <text x="387" y="179" text-anchor="middle" class="badge">USER</text>
+  <text x="460" y="199" text-anchor="middle" class="step-label">Drop files into raw/</text>
+  <text x="460" y="215" text-anchor="middle" class="step-desc">PDF, markdown, or repo URL</text>
+
+  <!-- Arrow B1 → B2 (down to hook lane) -->
+  <line x1="460" y1="225" x2="460" y2="385" stroke="#3B82F6" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <text x="470" y="310" class="note">auto</text>
+
+  <!-- B2: Hook detects -->
+  <rect x="360" y="390" width="200" height="55" rx="8" fill="#FFF7ED" stroke="#F59E0B" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="360" y="390" width="54" height="20" rx="4" fill="#F59E0B"/>
+  <text x="387" y="404" text-anchor="middle" class="badge">AUTO</text>
+  <text x="460" y="422" text-anchor="middle" class="step-label">Hook detects new files</text>
+  <text x="460" y="437" text-anchor="middle" class="step-desc">"N files ready to compile"</text>
+
+  <!-- Arrow B2 → B3 (back up to user) -->
+  <path d="M 560 417 L 600 417 L 600 200 L 620 200" stroke="#F59E0B" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+
+  <!-- B3: /kb-compile -->
+  <rect x="620" y="165" width="180" height="60" rx="8" fill="#FFFFFF" stroke="#3B82F6" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="620" y="165" width="54" height="20" rx="4" fill="#3B82F6"/>
+  <text x="647" y="179" text-anchor="middle" class="badge">USER</text>
+  <text x="710" y="199" text-anchor="middle" class="step-label">/kb-compile</text>
+  <text x="710" y="215" text-anchor="middle" class="step-desc">triggers the pipeline</text>
+
+  <!-- Arrow B3 → B4 (down to agent lane) -->
+  <line x1="710" y1="225" x2="710" y2="540" stroke="#3B82F6" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+
+  <!-- B4: Workers (parallel) -->
+  <rect x="580" y="545" width="130" height="65" rx="8" fill="#EFF6FF" stroke="#3B82F6" stroke-width="2" filter="url(#shadow)"/>
+  <text x="645" y="573" text-anchor="middle" class="step-label">Worker 1</text>
+  <text x="645" y="588" text-anchor="middle" class="step-desc">extract + summarize</text>
+
+  <rect x="720" y="545" width="130" height="65" rx="8" fill="#EFF6FF" stroke="#3B82F6" stroke-width="2" filter="url(#shadow)"/>
+  <text x="785" y="573" text-anchor="middle" class="step-label">Worker 2</text>
+  <text x="785" y="588" text-anchor="middle" class="step-desc">extract + summarize</text>
+
+  <!-- Parallel indicator -->
+  <text x="715" y="538" text-anchor="middle" class="note">parallel background agents</text>
+
+  <!-- Workers → Entity Resolution arrows -->
+  <line x1="645" y1="610" x2="645" y2="650" stroke="#94A3B8" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="785" y1="610" x2="785" y2="650" stroke="#94A3B8" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- B5: Entity Resolution (sequential) -->
+  <rect x="580" y="655" width="270" height="55" rx="8" fill="#FFFFFF" stroke="#8B5CF6" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="580" y="655" width="40" height="20" rx="4" fill="#8B5CF6"/>
+  <text x="600" y="669" text-anchor="middle" class="badge">SEQ</text>
+  <text x="715" y="685" text-anchor="middle" class="step-label">Entity / Concept Resolution</text>
+  <text x="715" y="700" text-anchor="middle" class="step-desc">reads source pages, creates entity + concept pages</text>
+
+  <!-- B5 → B6 -->
+  <line x1="715" y1="710" x2="715" y2="740" stroke="#94A3B8" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- B6: Commit -->
+  <rect x="620" y="745" width="190" height="50" rx="8" fill="#F0FDF4" stroke="#10B981" stroke-width="2" filter="url(#shadow)"/>
+  <text x="715" y="772" text-anchor="middle" class="step-label">Validate + Commit</text>
+  <text x="715" y="787" text-anchor="middle" class="step-desc">link check, update index, git commit</text>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- QUERY COLUMN                                -->
+  <!-- ═══════════════════════════════════════════ -->
+
+  <!-- Q1: Ask question -->
+  <rect x="900" y="165" width="240" height="60" rx="8" fill="#FFFFFF" stroke="#10B981" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="900" y="165" width="54" height="20" rx="4" fill="#10B981"/>
+  <text x="927" y="179" text-anchor="middle" class="badge">USER</text>
+  <text x="1020" y="199" text-anchor="middle" class="step-label">Ask a domain question</text>
+  <text x="1020" y="215" text-anchor="middle" class="step-desc">"What does source X say about Y?"</text>
+
+  <!-- Arrow Q1 → Q2 -->
+  <line x1="1020" y1="225" x2="1020" y2="540" stroke="#10B981" stroke-width="1.5" marker-end="url(#arrow-green)"/>
+  <text x="1030" y="390" class="note">auto-triggered</text>
+
+  <!-- Q2: kb-query reads wiki -->
+  <rect x="900" y="545" width="240" height="65" rx="8" fill="#F0FDF4" stroke="#10B981" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="900" y="545" width="54" height="20" rx="4" fill="#10B981"/>
+  <text x="927" y="559" text-anchor="middle" class="badge">AUTO</text>
+  <text x="1020" y="580" text-anchor="middle" class="step-label">kb-query reads wiki</text>
+  <text x="1020" y="596" text-anchor="middle" class="step-desc">index lookup, reads up to 5 pages</text>
+
+  <!-- Arrow Q2 → Q3 -->
+  <line x1="1020" y1="610" x2="1020" y2="650" stroke="#10B981" stroke-width="1.5" marker-end="url(#arrow-green)"/>
+
+  <!-- Q3: Answer -->
+  <rect x="900" y="655" width="240" height="55" rx="8" fill="#F0FDF4" stroke="#10B981" stroke-width="2" filter="url(#shadow)"/>
+  <text x="1020" y="685" text-anchor="middle" class="step-label">Answer with citations</text>
+  <text x="1020" y="700" text-anchor="middle" class="step-desc">sources linked, wiki vs general flagged</text>
+
+  <!-- Arrow Q3 → Q4 -->
+  <line x1="1020" y1="710" x2="1020" y2="740" stroke="#10B981" stroke-width="1.5" marker-end="url(#arrow-green)"/>
+
+  <!-- Q4: File back -->
+  <rect x="920" y="745" width="200" height="50" rx="8" fill="#FFFFFF" stroke="#10B981" stroke-width="1.5" stroke-dasharray="5,3" filter="url(#shadow)"/>
+  <text x="1020" y="772" text-anchor="middle" class="step-label">File back new insights</text>
+  <text x="1020" y="787" text-anchor="middle" class="step-desc">optional: creates new wiki pages</text>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- LEGEND                                      -->
+  <!-- ═══════════════════════════════════════════ -->
+
+  <!-- Cycle arrow: Build → Query feedback loop -->
+  <path d="M 850 770 Q 870 800 890 770" stroke="#94A3B8" stroke-width="1" fill="none" marker-end="url(#arrow)" stroke-dasharray="4,3"/>
+  <text x="870" y="815" text-anchor="middle" class="note">compounds over time</text>
+
+</svg>

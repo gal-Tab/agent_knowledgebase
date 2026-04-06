@@ -1,157 +1,147 @@
 # LLM Wiki Agent
 
-**Give your Claude Code agent a persistent, structured memory.** Drop PDFs, markdown files, or git repos into a folder — the agent automatically extracts, compiles, and maintains a structured wiki. Ask domain questions and get answers grounded in your sources, with cross-references across everything you've fed it.
+A Claude Code plugin that gives your agent persistent, structured memory. Drop PDFs, markdown files, or git repos into a folder — the agent extracts, compiles, and maintains a structured wiki. Ask domain questions and get answers grounded in your sources, with cross-references and citations.
 
-### What This Agent Does
+## Install
 
-- **Automatic ingestion:** Drop a file into `raw/` — the agent detects it, extracts clean markdown, and compiles structured wiki pages. No commands needed.
-- **Compiled knowledge, not raw search:** Sources are synthesized into interconnected pages (entities, concepts, comparisons) — not just indexed. The wiki gets smarter with every source.
-- **Domain questions from your sources:** Ask a question and the agent consults the wiki first, citing your actual sources rather than relying on general knowledge alone.
-- **Cross-referencing:** Entities and concepts are linked across sources automatically. Contradictions between sources are flagged inline.
-- **Compounding loop:** Valuable query answers can be filed back into the wiki, enriching it over time.
-- **Session persistence:** The agent remembers what happened last session, what's pending, and picks up where it left off.
-
-<p align="center">
-  <img src="architecture.svg" alt="LLM Wiki Agent Architecture" width="820" />
-</p>
-
----
-
-## Quick Start
+**Prerequisites:** [Claude Code](https://docs.anthropic.com/en/docs/claude-code) installed and working.
 
 ```bash
-# Clone the template into your project
-git clone https://github.com/gal-Tab/agent_knowledgebase.git my-project-kb
-cd my-project-kb
+# Install the plugin
+claude plugin add /path/to/llm-wiki-agent
 
-# Install dependencies
-./setup.sh
+# In any project, initialize a knowledge base
+/kb-init
+```
 
-# Drop a source file
+**Optional dependencies** (checked by `/kb-init`):
+- `pymupdf4llm` — for PDF ingestion: `pip3 install --user pymupdf4llm`
+- `repomix` — for repo ingestion: `npm install -g repomix` (npx fallback available)
+
+## Usage
+
+**Two human actions.** Everything else is automatic.
+
+### 1. Drop files into `raw/`
+
+```bash
 cp ~/papers/interesting-paper.pdf raw/
+cp ~/notes/meeting-notes.md raw/
+```
 
-# Start Claude Code — the agent takes it from here
+### 2. Start a session and compile
+
+```bash
 claude
+# Agent detects new files automatically on session start
+# Say "compile" or use /kb-compile to process them
 ```
 
-## How It Works
+### 3. Ask questions
 
-**Two human actions:**
+Ask domain questions — the agent consults the wiki first, citing your sources:
 
-1. Drop a file into `raw/` (PDF, markdown, or tell the agent a repo URL)
-2. Ask a question
+> "What does the paper say about scaling laws?"
+> "Compare the architectures described in these two papers"
+> "What do we know about OpenAI's approach to training?"
 
-**Everything else is automatic:**
+The agent reads the wiki index, identifies relevant pages, and synthesizes answers with source citations.
 
-- Hooks detect new files on session start and on every prompt
-- Extraction tools convert sources to clean markdown
-- The agent compiles structured wiki pages (sources, entities, concepts, comparisons)
-- Domain questions are answered by consulting the wiki
-- Git commits track every change with structured messages
+## What You Get Per Project
 
-## Architecture
+After running `/kb-init`, your project gets:
 
 ```
-L2: BEHAVIOR  — wiki-schema.md (domain rules, pluggable per project)
-L1: KNOWLEDGE — raw/ → extract → compile → wiki/ (the compiled wiki)
-L0: INFRA     — hooks + extraction tools + git
-```
-
-The engine (`CLAUDE.md` + hooks + tools) is generic. The domain rules (`wiki-schema.md`) are the only file you customize per project.
-
-## File Structure
-
-```
-project-root/
-├── .claude/
-│   ├── settings.json          # Hook config (SessionStart + UserPromptSubmit)
-│   └── hooks/
-│       └── kb-hook.sh         # Single script: file detection + orientation
-│
+project/
 ├── raw/                       # Drop files here
-│   ├── .manifest.json         # Pipeline state tracker
-│   └── .extracted/            # Auto-generated clean markdown
-│
-├── wiki/                      # Agent-maintained (never edit directly)
+│   ├── .manifest.json         # Pipeline state (auto-managed)
+│   └── .extracted/            # Extracted markdown (auto-generated)
+├── wiki/                      # Compiled wiki (auto-managed)
 │   ├── index.md               # Content catalog
 │   ├── sources/               # One summary per raw source
 │   ├── entities/              # People, orgs, products, tools
-│   ├── concepts/              # Ideas, frameworks, patterns
+│   ├── concepts/              # Ideas, frameworks, definitions
 │   └── comparisons/           # Cross-source analysis
-│
 ├── tools/
-│   ├── extract-pdf.py         # pymupdf4llm wrapper
-│   └── extract-repo.sh        # repomix wrapper
-│
-├── wiki-schema.md             # Domain rules (THE pluggable part)
-├── CLAUDE.md                  # Agent brain
-├── HANDOFF.md                 # Session persistence
-└── setup.sh                   # Install deps
+│   ├── extract-pdf.py         # PDF → markdown
+│   └── extract-repo.sh        # Repo → markdown
+├── wiki-schema.md             # Domain rules (customize this!)
+└── HANDOFF.md                 # Session persistence
 ```
+
+Each project has its own isolated knowledge base. The plugin provides the engine; your project owns the data.
+
+## How Compilation Works
+
+**Two-phase process:**
+
+1. **Source page** — Agent reads extracted markdown, creates `wiki/sources/{slug}.md` with structured summary, and lists candidate entities/concepts
+2. **Resolution** — For each candidate, agent checks the wiki index. Existing pages get updated. New pages are created if they meet the thresholds in `wiki-schema.md`. Index is updated, git commits track everything.
+
+**Thresholds** (configurable in `wiki-schema.md`):
+- **Entities:** Created if central to a source's thesis or mentioned in 2+ sources
+- **Concepts:** Only domain-specific or novel concepts (not common knowledge)
+- **Comparisons:** Only on explicit request or when sources clearly contradict
+
+## Customizing for Your Domain
+
+Edit `wiki-schema.md` after running `/kb-init`. The most important part is the **Domain Description** — it tells the agent what counts as "common knowledge" vs worth a dedicated page.
+
+Example for ML research:
+```markdown
+## Domain Description
+Machine learning research. Covers model architectures, training techniques,
+scaling laws, and benchmark results.
+```
+
+You can also customize entity types, page sections, creation thresholds, and compilation rules.
+
+## Commands
+
+| Command | What it does |
+|---------|-------------|
+| `/kb-init` | Initialize a knowledge base in the current project |
+| `/kb-compile` | Compile new or updated files from raw/ into wiki pages |
+
+The `kb-query` skill auto-invokes when you ask domain questions — no command needed.
 
 ## Supported Formats
 
 | Format | Tool | Status |
 |--------|------|--------|
-| PDF | pymupdf4llm | Day 1 |
-| Markdown / Text | passthrough | Day 1 |
-| Git repos | repomix | Day 1 |
-| EPUB | pandoc | Planned |
-| HTML / URLs | trafilatura | Planned |
-| CSV / XLSX | pandas | Planned |
-| YouTube | yt-dlp | Planned |
-| DOCX | pandoc | Planned |
+| PDF | pymupdf4llm | Supported |
+| Markdown / Text | passthrough | Supported |
+| Git repos | repomix | Supported |
 
-Adding a format = one extraction script + one line in CLAUDE.md.
+Adding a format = one extraction script + one line in the compile command.
 
-## How the Wiki Compiles
+## Architecture
 
-**Two-phase compilation:**
+![KB Plugin Flow](kb-plugin-flow.svg)
 
-1. **Source page** — The agent reads the extracted markdown and creates `wiki/sources/{slug}.md` with a structured summary + a list of candidate entities and concepts
-2. **Resolution** — For each candidate, the agent checks `wiki/index.md`. If a page exists, it updates it. If new and above threshold, it creates it. Then cleans up, updates the index, and commits.
+```
+Plugin (shared)          →  Project (per-project)
+  hooks/kb-status             raw/ + wiki/ + manifest
+  commands/kb-compile         wiki-schema.md
+  skills/kb-query             HANDOFF.md
+  tools/extract-*             tools/ (copied by kb-init)
+```
 
-**Thresholds** (defined in `wiki-schema.md`):
-- Entity pages: created if central to a source OR mentioned in 2+ sources
-- Concept pages: only for domain-specific or novel concepts
-- Comparison pages: only on explicit request or when sources conflict
+The plugin fires hooks on every session start and user prompt. In projects without a KB (no `raw/` directory), the hook exits silently with zero overhead.
 
 ## Scaling
 
 | Wiki Size | Strategy |
 |-----------|----------|
-| 0-100 pages | Flat `index.md`, agent reads it in full |
-| 100-300 pages | Auto-splits into category sub-indexes |
-| 300+ pages | `grep`-based search before reading indexes |
-
-The agent handles tier transitions automatically during compilation.
-
-## State Management
-
-Three sources of truth, three concerns:
-
-| What | Where | Tracks |
-|------|-------|--------|
-| Pipeline state | `raw/.manifest.json` | Which files extracted/compiled, content hashes |
-| Session state | `HANDOFF.md` | What happened, what's pending, active threads |
-| Change history | `git log` | Full audit trail with structured commit messages |
-
-## Customizing for Your Domain
-
-Edit `wiki-schema.md` to define:
-- What entity types matter (people? companies? APIs? chemical compounds?)
-- What sections each page type should have
-- Thresholds for page creation
-- Domain-specific compilation rules
-
-The rest of the template stays unchanged.
+| 0-100 pages | Flat `index.md` |
+| 100-300 pages | Category sub-indexes |
+| 300+ pages | grep-based search |
 
 ## Inspired By
 
-- [Karpathy's LLM Knowledge Bases](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) — the "compiled wiki" pattern
-- [Cole Medin](https://github.com/cole-medin) — git-as-memory approach
+- [Karpathy's LLM Knowledge Bases](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f)
+- [Cole Medin](https://github.com/cole-medin) — git-as-memory
 - [CandleKeep](https://getcandlekeep.com) — auto-detection model
-- [rvk7895/llm-knowledge-bases](https://github.com/rvk7895/llm-knowledge-bases) — reference implementation
 
 ## License
 

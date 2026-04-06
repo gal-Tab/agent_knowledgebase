@@ -2,7 +2,7 @@
 Date: (initial setup)
 
 ## Session Summary
-Knowledge base template initialized. No sources ingested yet.
+Knowledge base initialized. No sources ingested yet.
 
 ## Wiki Stats
 Sources: 0 | Entities: 0 | Concepts: 0 | Comparisons: 0 | Total: 0

@@ -1,0 +1,157 @@
+#!/usr/bin/env bash
+# LLM Wiki Agent — Knowledge Base Status Hook
+# Called by SessionStart and UserPromptSubmit via run-hook.cmd.
+# Scans raw/ for unprocessed files, reads git log, reports wiki stats.
+# Output goes to stdout and becomes additionalContext for the agent.
+#
+# Usage: kb-status <session-start|prompt>
+#   session-start: full output with HANDOFF.md and compile directive
+#   prompt:        minimal output, only reports if there are new/updated files
+set -eo pipefail
+
+MODE="${1:-prompt}"
+PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+RAW_DIR="$PROJECT_DIR/raw"
+WIKI_DIR="$PROJECT_DIR/wiki"
+MANIFEST="$RAW_DIR/.manifest.json"
+
+# Guard: exit silently if this project has no KB initialized
+[ -d "$RAW_DIR" ] || exit 0
+
+# Track new/updated/pending files as strings (bash 3.2 compatible)
+new_files=""
+updated_files=""
+pending_files=""
+
+# Read manifest (or empty object if missing)
+if [ -f "$MANIFEST" ]; then
+    manifest=$(cat "$MANIFEST")
+else
+    manifest="{}"
+fi
+
+# Parse manifest once: extract statuses, hashes, and compiled_at in a single python call
+manifest_data=""
+if command -v python3 &>/dev/null; then
+    manifest_data=$(echo "$manifest" | python3 -c "
+import json, sys
+m = json.load(sys.stdin)
+for k, v in m.items():
+    status = v.get('status', 'missing')
+    sha = v.get('sha256', '')
+    compiled = v.get('compiled_at') or ''
+    print(f'{k}\t{status}\t{sha}\t{compiled}')
+" 2>/dev/null || echo "")
+fi
+
+# Check each file in raw/ (skip hidden files/dirs)
+for filepath in "$RAW_DIR"/*; do
+    [ -f "$filepath" ] || continue
+    filename=$(basename "$filepath")
+
+    # Look up status, hash, and compiled_at from pre-parsed manifest data
+    status="missing"
+    stored_hash=""
+    compiled_at=""
+    if [ -n "$manifest_data" ]; then
+        line=$(echo "$manifest_data" | grep -F "${filename}"$'\t' | head -1 || echo "")
+        if [ -n "$line" ]; then
+            status=$(echo "$line" | cut -f2)
+            stored_hash=$(echo "$line" | cut -f3)
+            compiled_at=$(echo "$line" | cut -f4)
+        fi
+    fi
+
+    if [ "$status" = "missing" ]; then
+        new_files="${new_files:+$new_files, }$filename"
+    elif [ "$status" = "extracted" ] && [ -z "$compiled_at" ]; then
+        # Extracted but never compiled — interrupted compilation
+        pending_files="${pending_files:+$pending_files, }$filename"
+    elif [ "$status" = "compiled" ] || [ "$status" = "extracted" ]; then
+        # Check if file content changed (sha256 comparison)
+        current_hash=$(shasum -a 256 "$filepath" | cut -d' ' -f1)
+        if [ "$current_hash" != "$stored_hash" ]; then
+            updated_files="${updated_files:+$updated_files, }$filename"
+        fi
+    fi
+done
+
+# --- Git log (last session) ---
+last_session=""
+if git -C "$PROJECT_DIR" rev-parse --git-dir &>/dev/null; then
+    last_session=$(git -C "$PROJECT_DIR" log --oneline -20 2>/dev/null | grep -E '^[a-f0-9]+ \[session\]' | head -1 || echo "")
+fi
+
+# --- Wiki stats ---
+sources=0; entities=0; concepts=0; comparisons=0
+if [ -d "$WIKI_DIR/sources" ]; then
+    sources=$(find "$WIKI_DIR/sources" -name "*.md" -not -name "_index.md" 2>/dev/null | wc -l | tr -d ' ')
+fi
+if [ -d "$WIKI_DIR/entities" ]; then
+    entities=$(find "$WIKI_DIR/entities" -name "*.md" -not -name "_index.md" 2>/dev/null | wc -l | tr -d ' ')
+fi
+if [ -d "$WIKI_DIR/concepts" ]; then
+    concepts=$(find "$WIKI_DIR/concepts" -name "*.md" -not -name "_index.md" 2>/dev/null | wc -l | tr -d ' ')
+fi
+if [ -d "$WIKI_DIR/comparisons" ]; then
+    comparisons=$(find "$WIKI_DIR/comparisons" -name "*.md" -not -name "_index.md" 2>/dev/null | wc -l | tr -d ' ')
+fi
+total=$((sources + entities + concepts + comparisons))
+
+# --- Determine if there's work to do ---
+has_work=false
+if [ -n "$new_files" ] || [ -n "$updated_files" ] || [ -n "$pending_files" ]; then
+    has_work=true
+fi
+
+# --- Output ---
+# On prompt mode with no work: output nothing (reduce noise)
+if [ "$MODE" = "prompt" ] && [ "$has_work" = false ]; then
+    exit 0
+fi
+
+echo "=== KB Status ==="
+
+if [ -n "$new_files" ]; then
+    echo "New files in raw/: $new_files"
+fi
+
+if [ -n "$updated_files" ]; then
+    echo "Updated files: $updated_files"
+fi
+
+if [ -n "$pending_files" ]; then
+    echo "Pending compilation: $pending_files"
+fi
+
+if [ "$has_work" = true ]; then
+    if [ "$MODE" = "session-start" ]; then
+        echo "ACTION: Compile these files now. Use /kb-compile or say \"compile the new files\"."
+    else
+        echo "New files are waiting. Ask the user if they want to compile now, or use /kb-compile."
+    fi
+fi
+
+if [ "$has_work" = false ]; then
+    echo "No new or updated files in raw/"
+fi
+
+if [ -n "$last_session" ]; then
+    echo "Last session: $last_session"
+else
+    echo "Last session: (none)"
+fi
+
+echo "Wiki: ${total} pages (${sources}s/${entities}e/${concepts}c/${comparisons}x)"
+
+# Session-start gets full context
+if [ "$MODE" = "session-start" ]; then
+    echo "---"
+    echo "Before ending this session: update HANDOFF.md (summary, wiki stats, pending items, active threads) and commit: [session] End: {summary} | wiki: {total}pp"
+
+    if [ -f "$PROJECT_DIR/HANDOFF.md" ]; then
+        echo "---"
+        echo "HANDOFF.md summary:"
+        head -20 "$PROJECT_DIR/HANDOFF.md"
+    fi
+fi

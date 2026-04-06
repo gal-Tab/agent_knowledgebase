@@ -1,0 +1,17 @@
+{
+  "name": "llm-wiki-agent",
+  "version": "0.1.0",
+  "description": "Knowledge base agent that compiles PDFs, markdown, and repos into a structured wiki",
+  "author": {
+    "name": "gal-Tab"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/gal-Tab/agent_knowledgebase",
+  "keywords": [
+    "knowledge-base",
+    "wiki",
+    "pdf",
+    "research",
+    "compilation"
+  ]
+}
