@@ -7,12 +7,16 @@ A Claude Code plugin that gives your agent persistent, structured memory. Drop P
 **Prerequisites:** [Claude Code](https://docs.anthropic.com/en/docs/claude-code) installed and working.
 
 ```bash
-# Install the plugin
-claude plugin add /path/to/llm-wiki-agent
+# 1. Register the marketplace (one-time, no manual clone needed)
+claude plugin marketplace add https://github.com/gal-Tab/agent_knowledgebase
 
-# In any project, initialize a knowledge base
+# 2. Install the plugin
+claude plugin install llm-wiki-agent
+
+# 3. In any project, initialize a knowledge base
 /kb-init
 ```
+
 
 **Optional dependencies** (checked by `/kb-init`):
 - `pymupdf4llm` — for PDF ingestion: `pip3 install --user pymupdf4llm`

@@ -1,6 +1,5 @@
 {
   "name": "llm-wiki-agent-dev",
-  "description": "Development marketplace for LLM Wiki Agent plugin",
   "owner": {
     "name": "gal-Tab"
   },
