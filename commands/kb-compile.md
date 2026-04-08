@@ -73,6 +73,7 @@ For each file, spawn one background agent:
 ```
 Agent(
   subagent_type="general-purpose",
+  model="sonnet",
   run_in_background=true,
   prompt="[Worker prompt — see Step 4a below, with all {placeholders} filled]"
 )
