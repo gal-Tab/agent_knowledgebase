@@ -41,13 +41,47 @@ Frontmatter: title, compared_entities[], source_refs[]
 Sections: Overview, Dimensions of Comparison, Summary Table, Synthesis
 Create threshold: Only when explicitly requested by user, or when 2+ sources offer clearly conflicting claims about the same topic.
 
+## Confidence Labels
+
+Every cross-reference between wiki pages must include a confidence label indicating how the relationship was established.
+
+| Label | Meaning | When to use | Example |
+|-------|---------|-------------|---------|
+| STATED | Explicitly stated in source text | Direct quotes or explicit statements | "Vaswani works at Google" |
+| INFERRED | Reasonable deduction from context | Logical deductions from co-authorship, same institution, etc. | Co-authors → collaboration |
+| UNCERTAIN | Flagged for human review | Ambiguous attribution, contradictory sources, weak evidence | "May have contributed to..." |
+
+**Guidelines:**
+- Default to STATED when the source explicitly describes the relationship
+- Use INFERRED for logical deductions that a domain expert would consider reasonable (e.g., co-authorship implies collaboration, same institution implies familiarity)
+- Use UNCERTAIN when attribution is ambiguous, when sources contradict each other, or when the evidence is circumstantial
+- When in doubt between STATED and INFERRED, prefer INFERRED
+
+**In frontmatter:** `source_refs` entries include confidence:
+```yaml
+source_refs:
+  - slug: "attention-paper"
+    confidence: STATED
+  - slug: "scaling-laws"
+    confidence: INFERRED
+```
+
+**In See Also links:** Append the confidence label in brackets:
+```markdown
+## See Also
+- [Entity Name](../entities/name.md) [STATED]
+- [Related Concept](../concepts/concept.md) [INFERRED]
+```
+
 ## Frontmatter Template
 
 ```yaml
 ---
 title: ""
 type: source|entity|concept|comparison
-source_refs: []
+source_refs:
+  - slug: ""
+    confidence: STATED|INFERRED|UNCERTAIN
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
 tags: []

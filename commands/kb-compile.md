@@ -176,6 +176,29 @@ Concept extraction rules:
 - Skip widely-known general concepts unless the source offers novel treatment
 - If the domain description above is blank/general, only extract concepts coined or defined by the source
 
+### 3b. Create Full-Source Preservation (Candlekeep Hybrid)
+
+After creating the source summary page, preserve the original document structure for deep citation:
+
+1. Create directory: `wiki/full-sources/{slug}/`
+
+2. Generate `wiki/full-sources/{slug}/toc.md` — a table of contents built from the extracted document's headings:
+   ```markdown
+   # {Source Title} — Table of Contents
+   
+   - [Page 1](page-1.md) — {first heading or "Introduction"}
+   - [Page 2](page-2.md) — {heading at start of page 2}
+   ...
+   ```
+
+3. Split the extracted content into `wiki/full-sources/{slug}/page-{N}.md` files, each ~2000 words (split at heading boundaries when possible). Each page preserves the original text verbatim — no summarization.
+
+4. Add to the source summary page frontmatter: `full_source: "full-sources/{slug}/"`
+
+This is additive — the wiki summary still works as before, but agents can "drill down" to original text when the summary isn't sufficient.
+
+**Skip this step if the extracted content is under 500 words** (no benefit to pagination for short documents).
+
 ### 4. Write Result File
 
 Write a JSON file to raw/.compile-results/{slug}.json with this exact structure:
@@ -273,7 +296,9 @@ Follow wiki-schema.md. Typically:
 ---
 title: "{Entity Name}"
 type: entity
-source_refs: ["{source-slug}"]
+source_refs:
+  - slug: "{source-slug}"
+    confidence: STATED|INFERRED|UNCERTAIN
 created: {YYYY-MM-DD}
 updated: {YYYY-MM-DD}
 tags: []
@@ -281,6 +306,13 @@ tags: []
 ```
 
 Sections: Overview, Key Facts, Source Appearances. End with `## See Also` listing related pages.
+
+**Confidence on cross-references:** Assign a confidence label to every cross-reference:
+- `STATED` — the relationship is explicitly stated in the source text
+- `INFERRED` — the relationship is a logical deduction from context (e.g., co-authorship implies collaboration)
+- `UNCERTAIN` — the relationship is ambiguous or weakly supported
+
+Format See Also links with confidence tags: `[Entity Name](../entities/name.md) [STATED]`
 
 ### 6e: Concept Page Structure
 
@@ -290,14 +322,16 @@ title: "{Concept Name}"
 type: concept
 aliases: []
 domain_tags: []
-source_refs: ["{source-slug}"]
+source_refs:
+  - slug: "{source-slug}"
+    confidence: STATED|INFERRED|UNCERTAIN
 created: {YYYY-MM-DD}
 updated: {YYYY-MM-DD}
 tags: []
 ---
 ```
 
-Sections: Definition, Context, Related Concepts. End with `## See Also`.
+Sections: Definition, Context, Related Concepts. End with `## See Also` with confidence labels on each link.
 
 ### 6f: Contradiction Handling
 
@@ -377,6 +411,18 @@ rm -rf raw/.compile-results/
 If total wiki pages exceed 100, split index into category sub-indexes:
 - `wiki/index.md` becomes a meta-index (category names + counts + links)
 - Create `wiki/sources/_index.md`, `wiki/entities/_index.md`, `wiki/concepts/_index.md`, `wiki/comparisons/_index.md`
+
+### 8e: Generate Relationship Graph
+
+Generate a Mermaid diagram showing entity↔source↔concept relationships:
+
+```bash
+python3 tools/generate-graph.py wiki wiki/graph.mmd
+```
+
+This reads page frontmatter (key_entities, key_concepts, source_refs) and produces a visual relationship map. The graph is regenerated on every compile run.
+
+If `tools/generate-graph.py` is not available (e.g., not copied during kb-init), skip this step silently.
 
 ---
 

@@ -34,11 +34,33 @@ Consult the project's compiled wiki to answer domain questions with source citat
 
 4. **Distinguish wiki knowledge from general knowledge.** If you also use general knowledge beyond the wiki, say so: "The wiki says X. Additionally, from general knowledge..."
 
+## Deep Cite Mode (Source Preservation)
+
+When a wiki summary page is insufficient to answer a question with the detail or precision required — or when the user asks for exact quotes, specific sections, or verbatim text — use the full-source preservation layer:
+
+1. Check if the source page has `full_source:` in its frontmatter
+2. If yes, read `wiki/full-sources/{slug}/toc.md` to see the original document structure
+3. Identify the relevant page(s) from the table of contents
+4. Read the specific `wiki/full-sources/{slug}/page-{N}.md` file(s)
+5. Quote original text directly, citing the specific page: "From [Source Title, Page N](wiki/full-sources/{slug}/page-{N}.md)..."
+
+**When to use deep cite:**
+- User asks for exact quotes or verbatim text
+- User needs more detail than the summary provides
+- User asks "what exactly does the source say about..."
+- The summary is ambiguous and the original text would clarify
+
+**When NOT to use deep cite:**
+- The summary page sufficiently answers the question
+- The user is asking for a high-level overview
+- No `full_source:` field exists in the source page frontmatter
+
 ## Guardrails
 
 - **Never load the entire wiki into context.** Always read the index first, then only the relevant pages.
 - **Never read more than 5 pages per query** unless the user explicitly asks for a comprehensive review.
 - **Always cite sources.** Every claim from the wiki should link to the page it came from.
+- **Deep cite pages count toward the 5-page limit.** Each full-source page-{N}.md counts as one page read.
 
 ## File-Back (Compounding Loop)
 

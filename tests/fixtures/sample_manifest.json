@@ -1,0 +1,33 @@
+{
+  "paper-one.pdf": {
+    "status": "compiled",
+    "source_page": "wiki/sources/paper-one.md",
+    "wiki_pages": [
+      "wiki/sources/paper-one.md",
+      "wiki/entities/smith-john.md",
+      "wiki/concepts/scaling-laws.md"
+    ],
+    "extracted_at": "2026-04-01T10:00:00+00:00",
+    "compiled_at": "2026-04-01T10:05:00+00:00",
+    "sha256": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+    "error": null
+  },
+  "paper-two.md": {
+    "status": "extracted",
+    "source_page": null,
+    "wiki_pages": [],
+    "extracted_at": "2026-04-02T09:00:00+00:00",
+    "compiled_at": null,
+    "sha256": "b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3",
+    "error": null
+  },
+  "broken-file.pdf": {
+    "status": "failed",
+    "source_page": null,
+    "wiki_pages": [],
+    "extracted_at": null,
+    "compiled_at": null,
+    "sha256": "c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4",
+    "error": "pymupdf4llm extraction failed: corrupted PDF"
+  }
+}

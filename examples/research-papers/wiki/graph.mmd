@@ -1,0 +1,42 @@
+graph LR
+
+    %% Sources (rectangles)
+    s_scaling_laws_survey["Neural Scaling Laws: A Comprehensive Sur..."]
+    s_attention_mechanisms["Attention Mechanisms in Transformer Arch..."]
+    s_efficient_inference["Efficient Inference for Large Language M..."]
+
+    %% Entities (rounded rectangles)
+    e_kaplan_jared("Jared Kaplan")
+    e_openai("OpenAI")
+    e_vaswani_ashish("Ashish Vaswani")
+    e_google_deepmind("Google DeepMind")
+
+    %% Concepts (hexagons)
+    c_scaling_laws{{Scaling Laws}}
+    c_compute_optimal_training{{Compute-Optimal Training}}
+    c_attention_mechanisms{{Attention Mechanisms}}
+
+    %% Relationships
+    s_scaling_laws_survey --> e_kaplan_jared
+    s_scaling_laws_survey --> e_openai
+    s_scaling_laws_survey --> e_google_deepmind
+    s_scaling_laws_survey -.-> c_scaling_laws
+    s_scaling_laws_survey -.-> c_compute_optimal_training
+    s_attention_mechanisms --> e_vaswani_ashish
+    s_attention_mechanisms --> e_openai
+    s_attention_mechanisms --> e_google_deepmind
+    s_attention_mechanisms -.-> c_attention_mechanisms
+    s_attention_mechanisms -.-> c_scaling_laws
+    s_efficient_inference --> e_openai
+    s_efficient_inference --> e_google_deepmind
+    s_efficient_inference -.-> c_scaling_laws
+    s_efficient_inference -.-> c_attention_mechanisms
+    s_efficient_inference -.-> c_compute_optimal_training
+
+    %% Styling
+    classDef source fill:#4a90d9,stroke:#2c5f8a,color:#fff
+    classDef entity fill:#50c878,stroke:#2e8b57,color:#fff
+    classDef concept fill:#daa520,stroke:#b8860b,color:#fff
+    class s_scaling_laws_survey,s_attention_mechanisms,s_efficient_inference source
+    class e_kaplan_jared,e_openai,e_vaswani_ashish,e_google_deepmind entity
+    class c_scaling_laws,c_compute_optimal_training,c_attention_mechanisms concept
