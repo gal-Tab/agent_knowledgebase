@@ -63,3 +63,37 @@ def parse_extracted_references(content: str, source_slug: str) -> list[dict]:
                 "source_slug": source_slug,
             })
     return candidates
+
+
+def deduplicate_candidates(candidates: list[dict]) -> list[dict]:
+    """Merge candidates with the same slug across sources.
+
+    Returns list of deduplicated dicts with keys:
+    kind, name, slug, entity_type, sources (list), descriptions (dict of source_slug: desc).
+    """
+    if not candidates:
+        return []
+
+    by_slug = {}
+    for c in candidates:
+        if c["kind"] == "entity":
+            slug = slug_entity(c["name"], c["entity_type"])
+        else:
+            slug = slug_concept(c["name"])
+
+        if slug not in by_slug:
+            by_slug[slug] = {
+                "kind": c["kind"],
+                "name": c["name"],
+                "slug": slug,
+                "entity_type": c["entity_type"],
+                "sources": [],
+                "descriptions": {},
+            }
+
+        entry = by_slug[slug]
+        if c["source_slug"] not in entry["sources"]:
+            entry["sources"].append(c["source_slug"])
+        entry["descriptions"][c["source_slug"]] = c["description"]
+
+    return list(by_slug.values())
