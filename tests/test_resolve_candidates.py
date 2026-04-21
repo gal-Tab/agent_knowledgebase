@@ -1,10 +1,11 @@
 """Tests for resolve_candidates (tools/resolve_candidates.py)."""
 import pytest
+import subprocess
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "tools"))
-from resolve_candidates import parse_extracted_references, deduplicate_candidates, classify_candidates
+from resolve_candidates import parse_extracted_references, deduplicate_candidates, classify_candidates, format_brief, batch_candidates
 
 
 class TestParseExtractedReferences:
@@ -179,3 +180,165 @@ class TestClassifyCandidates:
         result = classify_candidates(candidates, wiki, {})
         assert len(result["update"]) == 1
         assert result["update"][0]["existing_slug"] == "kaplan-jared"
+
+
+class TestFormatBrief:
+    def test_create_section(self):
+        classified = {
+            "create": [{
+                "kind": "entity", "name": "Meta AI", "slug": "meta-ai",
+                "entity_type": "org", "sources": ["efficient-inference"],
+                "descriptions": {"efficient-inference": "developed Llama"},
+            }],
+            "update": [], "skip": [], "stale": [],
+        }
+        brief = format_brief(classified)
+        assert "## CREATE (1)" in brief
+        assert "### Entity: Meta AI (org)" in brief
+        assert "meta-ai" in brief
+        assert "developed Llama" in brief
+
+    def test_update_section(self):
+        classified = {
+            "create": [],
+            "update": [{
+                "kind": "entity", "name": "OpenAI", "slug": "openai",
+                "entity_type": "org", "sources": ["new-paper"],
+                "existing_slug": "openai", "existing_category": "entities",
+                "descriptions": {"new-paper": "inference work"},
+            }],
+            "skip": [], "stale": [],
+        }
+        brief = format_brief(classified)
+        assert "## UPDATE (1)" in brief
+        assert "Sources adding: new-paper" in brief
+
+    def test_stale_section(self):
+        classified = {
+            "create": [], "update": [], "skip": [],
+            "stale": [{
+                "slug": "google-brain",
+                "page": "wiki/entities/google-brain.md",
+                "source": "attention-paper",
+                "reason": "absent from re-extraction of attention-paper",
+            }],
+        }
+        brief = format_brief(classified)
+        assert "## STALE (1)" in brief
+        assert "google-brain" in brief
+
+    def test_skip_not_in_output(self):
+        classified = {
+            "create": [], "update": [],
+            "skip": [{"slug": "openai", "name": "OpenAI"}],
+            "stale": [],
+        }
+        brief = format_brief(classified)
+        assert "openai" not in brief.lower() or "SKIP" not in brief
+
+    def test_all_empty_returns_empty(self):
+        classified = {"create": [], "update": [], "skip": [], "stale": []}
+        assert format_brief(classified) == ""
+
+
+class TestBatchCandidates:
+    def test_under_limits_single_batch(self):
+        classified = {
+            "create": [
+                {"slug": f"entity-{i}", "sources": ["src-1"]}
+                for i in range(5)
+            ],
+            "update": [], "skip": [], "stale": [],
+        }
+        batches = batch_candidates(classified, max_sources=5, max_candidates=30)
+        assert len(batches) == 1
+
+    def test_exceeds_candidate_cap_splits(self):
+        classified = {
+            "create": [
+                {"slug": f"entity-{i}", "sources": [f"src-{i % 3}"]}
+                for i in range(35)
+            ],
+            "update": [], "skip": [], "stale": [],
+        }
+        batches = batch_candidates(classified, max_sources=5, max_candidates=30)
+        assert len(batches) >= 2
+        for batch in batches:
+            total = len(batch["create"]) + len(batch["update"])
+            assert total <= 30
+
+    def test_stale_only_in_first_batch(self):
+        classified = {
+            "create": [
+                {"slug": f"entity-{i}", "sources": [f"src-{i % 3}"]}
+                for i in range(35)
+            ],
+            "update": [], "skip": [],
+            "stale": [{"slug": "old", "page": "wiki/entities/old.md"}],
+        }
+        batches = batch_candidates(classified, max_sources=5, max_candidates=30)
+        assert len(batches[0]["stale"]) == 1
+        for batch in batches[1:]:
+            assert len(batch["stale"]) == 0
+
+
+class TestCLI:
+    def test_runs_and_outputs_brief(self, tmp_path, source_with_refs, sample_index):
+        wiki = tmp_path / "wiki"
+        for subdir in ("sources", "entities", "concepts"):
+            (wiki / subdir).mkdir(parents=True)
+        (wiki / "index.md").write_text(sample_index)
+
+        results_dir = tmp_path / "raw" / ".compile-results"
+        results_dir.mkdir(parents=True)
+
+        (wiki / "sources" / "attention-paper.md").write_text(source_with_refs)
+
+        import json
+        result_json = {
+            "source_file": "attention-paper.pdf",
+            "slug": "attention-paper",
+            "source_page": "wiki/sources/attention-paper.md",
+            "status": "success",
+        }
+        (results_dir / "attention-paper.json").write_text(json.dumps(result_json))
+
+        manifest = tmp_path / "raw" / ".manifest.json"
+        manifest.write_text("{}")
+
+        script = str(Path(__file__).parent.parent / "tools" / "resolve_candidates.py")
+        proc = subprocess.run(
+            ["python3", script, str(wiki), str(results_dir), str(manifest)],
+            capture_output=True, text=True, cwd=str(Path(__file__).parent.parent),
+        )
+        assert proc.returncode == 0
+        assert "## CREATE" in proc.stdout
+        assert "Ashish Vaswani" in proc.stdout
+
+    def test_no_candidates_empty_output(self, tmp_path, sample_index):
+        wiki = tmp_path / "wiki"
+        for subdir in ("sources", "entities", "concepts"):
+            (wiki / subdir).mkdir(parents=True)
+        (wiki / "index.md").write_text(sample_index)
+
+        results_dir = tmp_path / "raw" / ".compile-results"
+        results_dir.mkdir(parents=True)
+
+        source_no_refs = "---\ntitle: Test\ntype: source\n---\n\n## Overview\n\nNothing.\n\n## See Also\n\n"
+        (wiki / "sources" / "empty.md").write_text(source_no_refs)
+        import json
+        (results_dir / "empty.json").write_text(json.dumps({
+            "source_file": "empty.md", "slug": "empty",
+            "source_page": "wiki/sources/empty.md", "status": "success",
+        }))
+
+        manifest = tmp_path / "raw" / ".manifest.json"
+        manifest.write_text("{}")
+
+        script = str(Path(__file__).parent.parent / "tools" / "resolve_candidates.py")
+        proc = subprocess.run(
+            ["python3", script, str(wiki), str(results_dir), str(manifest)],
+            capture_output=True, text=True, cwd=str(Path(__file__).parent.parent),
+        )
+        assert proc.returncode == 0
+        assert proc.stdout.strip() == ""

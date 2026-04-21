@@ -225,3 +225,165 @@ def classify_candidates(
                     })
 
     return result
+
+
+def format_brief(classified: dict) -> str:
+    """Format classified candidates as a markdown resolution brief.
+
+    SKIPs are omitted. Returns empty string if nothing to resolve.
+    """
+    sections = []
+    creates = classified["create"]
+    updates = classified["update"]
+    stales = classified["stale"]
+
+    if not creates and not updates and not stales:
+        return ""
+
+    if creates:
+        sections.append(f"## CREATE ({len(creates)})\n")
+        for c in creates:
+            kind_label = c["kind"].capitalize()
+            type_info = f" ({c.get('entity_type', '')})" if c.get("entity_type") else ""
+            sections.append(f"### {kind_label}: {c['name']}{type_info} → {c['slug']}")
+            for src, desc in c.get("descriptions", {}).items():
+                sections.append(f"- {src}: {desc}")
+            sections.append("")
+
+    if updates:
+        sections.append(f"## UPDATE ({len(updates)})\n")
+        for c in updates:
+            kind_label = c["kind"].capitalize()
+            type_info = f" ({c.get('entity_type', '')})" if c.get("entity_type") else ""
+            existing = c.get("existing_slug", c["slug"])
+            sources_str = ", ".join(c["sources"])
+            sections.append(f"### {kind_label}: {c['name']}{type_info} → {existing}")
+            sections.append(f"Sources adding: {sources_str}")
+            for src, desc in c.get("descriptions", {}).items():
+                sections.append(f"- {src}: {desc}")
+            sections.append("")
+
+    if stales:
+        sections.append(f"## STALE ({len(stales)})\n")
+        for s in stales:
+            sections.append(f"- {s['slug']} ({s['page']}) — {s['reason']}")
+        sections.append("")
+
+    return "\n".join(sections).strip() + "\n"
+
+
+def batch_candidates(
+    classified: dict,
+    max_sources: int = 5,
+    max_candidates: int = 30,
+) -> list[dict]:
+    """Split classified candidates into batches respecting limits.
+
+    Splits at source boundaries. STALE entries go in first batch only.
+    """
+    creates = classified["create"]
+    updates = classified["update"]
+    stales = classified["stale"]
+    all_actionable = creates + updates
+
+    if len(all_actionable) <= max_candidates:
+        return [classified]
+
+    by_source = {}
+    for c in all_actionable:
+        for src in c.get("sources", []):
+            by_source.setdefault(src, []).append(c)
+
+    batches = []
+    current_batch = {"create": [], "update": [], "skip": [], "stale": []}
+    current_count = 0
+    current_sources = 0
+    seen_slugs = set()
+
+    for src, src_candidates in by_source.items():
+        src_new = [c for c in src_candidates if c["slug"] not in seen_slugs]
+        if not src_new:
+            continue
+
+        would_exceed = (
+            current_count + len(src_new) > max_candidates
+            or current_sources + 1 > max_sources
+        )
+        if would_exceed and current_count > 0:
+            batches.append(current_batch)
+            current_batch = {"create": [], "update": [], "skip": [], "stale": []}
+            current_count = 0
+            current_sources = 0
+
+        for c in src_new:
+            if c["slug"] in seen_slugs:
+                continue
+            seen_slugs.add(c["slug"])
+            bucket = "update" if "existing_slug" in c else "create"
+            current_batch[bucket].append(c)
+            current_count += 1
+        current_sources += 1
+
+    if current_count > 0:
+        batches.append(current_batch)
+
+    if batches and stales:
+        batches[0]["stale"] = stales
+
+    return batches if batches else [classified]
+
+
+def main():
+    import argparse
+    import json
+
+    parser = argparse.ArgumentParser(description="Batch resolution candidate collector")
+    parser.add_argument("wiki_path", type=Path, help="Path to wiki/ directory")
+    parser.add_argument("results_path", type=Path, help="Path to raw/.compile-results/")
+    parser.add_argument("manifest_path", type=Path, help="Path to raw/.manifest.json")
+    parser.add_argument("--batch-size", type=int, default=5, help="Max sources per batch")
+    parser.add_argument("--max-candidates", type=int, default=30, help="Max candidates per batch")
+    args = parser.parse_args()
+
+    manifest = {}
+    if args.manifest_path.exists():
+        manifest = json.loads(args.manifest_path.read_text())
+
+    result_files = sorted(args.results_path.glob("*.json"))
+    all_candidates = []
+    recompiled = {}
+
+    for rf in result_files:
+        result = json.loads(rf.read_text())
+        if result.get("status") != "success":
+            continue
+        slug = result["slug"]
+        source_page = args.wiki_path / "sources" / f"{slug}.md"
+        if not source_page.exists():
+            continue
+        content = source_page.read_text()
+        parsed = parse_extracted_references(content, slug)
+        all_candidates.extend(parsed)
+
+        source_file = result.get("source_file", "")
+        if source_file in manifest and manifest[source_file].get("status") == "compiled":
+            recompiled[slug] = source_file
+
+    if not all_candidates and not recompiled:
+        return
+
+    deduped = deduplicate_candidates(all_candidates)
+    classified = classify_candidates(deduped, args.wiki_path, manifest, recompiled or None)
+
+    batches = batch_candidates(classified, args.batch_size, args.max_candidates)
+
+    for i, batch in enumerate(batches):
+        if i > 0:
+            print("\n---BATCH---\n")
+        brief = format_brief(batch)
+        if brief:
+            print(brief, end="")
+
+
+if __name__ == "__main__":
+    main()
