@@ -303,11 +303,27 @@ For each CREATE candidate:
 3. Cross-reference other candidates in this batch freely — they will all exist after this pass
 4. Assign confidence labels (STATED/INFERRED/UNCERTAIN) per wiki-schema.md rules
 
+**Frontmatter source_refs format** — each entry must include slug AND confidence:
+```yaml
+source_refs:
+  - slug: "openai-gpt4"
+    confidence: STATED
+  - slug: "ai-safety-landscape"
+    confidence: INFERRED
+```
+
+**Link format** — use relative markdown links, NOT wiki-links:
+```markdown
+## See Also
+- [OpenAI](../entities/openai.md) [STATED]
+- [RLHF](../concepts/rlhf.md) [INFERRED]
+```
+
 For each UPDATE candidate:
 1. Read the existing page at wiki/{category}/{existing_slug}.md using the Read tool
-2. Add the new source to the source_refs frontmatter
+2. Add the new source to the source_refs frontmatter (slug + confidence format)
 3. Add a new bullet under Source Appearances with the new source context
-4. Update ## See Also if the new source reveals new relationships
+4. Update ## See Also if the new source reveals new relationships (relative link format)
 5. Use Edit to append — never rewrite existing content
 6. If the new source contradicts existing content, flag inline:
    **[Contradiction]** Source A claims X, but Source B claims Y.
