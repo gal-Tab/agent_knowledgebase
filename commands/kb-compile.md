@@ -1,11 +1,11 @@
 ---
-description: Compile new or updated source files from raw/ into structured wiki pages. Dispatches background agents for extraction and compilation.
+description: Compile new or updated source files from raw/ into structured wiki pages. Dispatches background agents for extraction, then batch-resolves entities/concepts via code dedup + single LLM pass.
 allowed-tools: Bash(python3:*), Bash(shasum:*), Bash(cp:*), Bash(command:*), Bash(mkdir:*), Bash(rm:*), Bash(git add:*), Bash(git commit:*), Bash(git status:*), Read, Write, Edit, Glob, Grep, Agent
 ---
 
 # Compile Knowledge Base Sources
 
-Process all uncompiled or updated files in `raw/` through the extraction and compilation pipeline. Dispatches background agents for parallel source extraction, then resolves entities/concepts sequentially.
+Process all uncompiled or updated files in `raw/` through the extraction and compilation pipeline. Dispatches background agents for parallel source extraction, then collects and deduplicates entity/concept candidates in code before resolving them in a single LLM pass per batch.
 
 ---
 
@@ -265,91 +265,93 @@ Tell the user per file:
 
 ## Step 6: Entity/Concept Resolution
 
-For each successfully compiled source page, process entities and concepts **sequentially** (one source at a time, in the main process). This ensures entity/concept pages reflect real-time wiki state — no race conditions.
+Batch resolution: collect all candidates from source pages, deduplicate in code, classify against existing wiki, then resolve in a single LLM pass per batch.
 
-### 6a: Read and Parse
+### 6a: Collect and Classify
 
-1. Read `wiki/sources/{slug}.md` (~1500 words — the summarized source page, NOT the original 32K source file)
-2. Find the `## Extracted References` section
-3. Parse each line for entity and concept candidates
+Run the resolution script to parse, deduplicate, and classify all candidates:
 
-### 6b: Check for Existing Pages
-
-For each candidate:
-
-1. Read `wiki/index.md` (re-read each iteration to see updates from prior candidates)
-2. Normalize the candidate name: lowercase, strip Inc/Ltd/Corp/LLC, compare against existing slugs and aliases
-3. If a page already exists → read it. Update ONLY if the new source adds meaningful new information (new facts, new context, or contradictions). Append to relevant sections — never rewrite existing content.
-4. If no page exists → apply creation thresholds before creating
-
-### 6c: Creation Thresholds
-
-- **Entity:** Create if central to any source's thesis OR mentioned in 2+ existing sources. Do NOT create thin pages for minor mentions.
-- **Concept:** Create only if domain-specific or novel. When in doubt, don't create — the concept can be promoted later when more sources reference it.
-- **Comparison:** Only create if explicitly requested by the user OR two sources clearly contradict each other on the same topic.
-
-### 6d: Entity Page Structure
-
-Follow wiki-schema.md. Typically:
-
-```yaml
----
-title: "{Entity Name}"
-type: entity
-source_refs:
-  - slug: "{source-slug}"
-    confidence: STATED|INFERRED|UNCERTAIN
-created: {YYYY-MM-DD}
-updated: {YYYY-MM-DD}
-tags: []
----
+```bash
+python3 tools/resolve_candidates.py wiki/ raw/.compile-results/ raw/.manifest.json --batch-size 5 --max-candidates 30
 ```
 
-Sections: Overview, Key Facts, Source Appearances. End with `## See Also` listing related pages.
+Capture stdout. If the output is empty (all candidates are SKIPs or no Extracted References found), tell the user `"All entities/concepts already up to date."` and skip to Step 7.
 
-**Confidence on cross-references:** Assign a confidence label to every cross-reference:
-- `STATED` — the relationship is explicitly stated in the source text
-- `INFERRED` — the relationship is a logical deduction from context (e.g., co-authorship implies collaboration)
-- `UNCERTAIN` — the relationship is ambiguous or weakly supported
+If the output contains `---BATCH---` delimiters, split into separate batches and process each sequentially via Step 6b.
 
-Format See Also links with confidence tags: `[Entity Name](../entities/name.md) [STATED]`
+### 6b: Resolve (one LLM call per batch)
 
-### 6e: Concept Page Structure
+For each batch, assemble the resolution prompt in this exact order (cache-optimized — prefix is static across batches):
 
-```yaml
----
-title: "{Concept Name}"
-type: concept
-aliases: []
-domain_tags: []
-source_refs:
-  - slug: "{source-slug}"
-    confidence: STATED|INFERRED|UNCERTAIN
-created: {YYYY-MM-DD}
-updated: {YYYY-MM-DD}
-tags: []
----
+**Prompt structure:**
+
+```
+[CACHEABLE PREFIX]
+
+You are resolving entity and concept candidates into wiki pages.
+All candidates have been pre-classified — follow the classification exactly.
+
+## Domain Rules
+
+{Insert full text of wiki-schema.md}
+
+## Resolution Instructions
+
+For each CREATE candidate:
+1. Generate the full page (frontmatter + all sections + ## See Also with confidence labels)
+2. Write it to wiki/{entities|concepts}/{slug}.md using the Write tool
+3. Cross-reference other candidates in this batch freely — they will all exist after this pass
+4. Assign confidence labels (STATED/INFERRED/UNCERTAIN) per wiki-schema.md rules
+
+For each UPDATE candidate:
+1. Read the existing page at wiki/{category}/{existing_slug}.md using the Read tool
+2. Add the new source to the source_refs frontmatter
+3. Add a new bullet under Source Appearances with the new source context
+4. Update ## See Also if the new source reveals new relationships
+5. Use Edit to append — never rewrite existing content
+6. If the new source contradicts existing content, flag inline:
+   **[Contradiction]** Source A claims X, but Source B claims Y.
+
+For STALE entries:
+- Take no action. These are logged for human review only.
+
+After processing all candidates, output a decision summary. One line per candidate:
+{name} | {action: created/updated/skipped} | {reason}
+
+## Current Wiki Index
+
+{Insert current wiki/index.md content}
+
+[VARIABLE TAIL]
+
+## Resolution Brief
+
+{Insert stdout from Step 6a — the batch being processed}
 ```
 
-Sections: Definition, Context, Related Concepts. End with `## See Also` with confidence labels on each link.
+### 6c: Clean Up and Trace
 
-### 6f: Contradiction Handling
+After resolution completes:
 
-If a new source contradicts information in an existing page, flag it inline:
+1. Remove `## Extracted References` from each source page (Edit out the section)
+2. Capture the LLM's decision summary lines and write to `raw/.compile-results/resolution-trace.json`:
 
-```markdown
-**[Contradiction]** Source A claims X, but Source B claims Y.
+```json
+{
+  "batch": 1,
+  "timestamp": "{ISO 8601}",
+  "candidates_in": 18,
+  "decisions": [
+    {"name": "Entity Name", "type": "entity", "action": "created",
+     "reason": "central to 2 sources", "sources": ["src-a", "src-b"],
+     "page": "wiki/entities/slug.md"}
+  ]
+}
 ```
 
-Do NOT silently overwrite the previous claim.
+3. Tell the user per batch: `"Batch N: +{created} created, ~{updated} updated, {skipped} skipped"`
 
-### 6g: Clean Up Source Page
-
-After resolving all candidates, remove the `## Extracted References` section from the source page. The candidates are now resolved into actual pages.
-
-Tell the user per source: `"Resolved: {source-title} → +{N} entities, +{M} concepts"`
-
-Track all pages created and updated across all sources for use in Steps 7-9.
+Track all pages created and updated across all batches for use in Steps 7-9.
 
 ---
 
@@ -400,7 +402,19 @@ For failed files:
 
 ### 8c: Clean Up
 
-Remove temporary compile results:
+Preserve resolution traces, then remove temporary compile results:
+
+```bash
+mkdir -p wiki/.traces
+```
+
+If `raw/.compile-results/resolution-trace.json` exists, move it:
+
+```bash
+mv raw/.compile-results/resolution-trace.json wiki/.traces/$(date -u +%Y%m%dT%H%M%S)-resolution.json
+```
+
+Then remove the temporary directory:
 
 ```bash
 rm -rf raw/.compile-results/

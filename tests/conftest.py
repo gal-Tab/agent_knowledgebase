@@ -42,3 +42,21 @@ def tmp_project(tmp_path):
     for subdir in ("sources", "entities", "concepts", "comparisons"):
         (wiki_dir / subdir).mkdir(parents=True)
     return tmp_path
+
+
+@pytest.fixture
+def source_with_refs():
+    """Load source page with Extracted References."""
+    return (FIXTURES_DIR / "source_with_refs.md").read_text()
+
+
+@pytest.fixture
+def source_with_refs_2():
+    """Load second source page with overlapping candidates."""
+    return (FIXTURES_DIR / "source_with_refs_2.md").read_text()
+
+
+@pytest.fixture
+def sample_index():
+    """Load sample wiki index."""
+    return (FIXTURES_DIR / "sample_index.md").read_text()
