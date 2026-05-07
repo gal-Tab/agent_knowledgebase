@@ -4,7 +4,8 @@ type: entity
 aliases:
   - "J. Kaplan"
 source_refs:
-  - "scaling-laws-neural-lm"
+  - slug: "scaling-laws-neural-lm"
+    confidence: STATED
 created: 2026-04-01
 updated: 2026-04-01
 tags:
@@ -27,5 +28,5 @@ Jared Kaplan is a researcher known for his foundational work on neural scaling l
 
 ## See Also
 
-- [OpenAI](../entities/openai.md)
-- [Scaling Laws](../concepts/scaling-laws.md)
+- [OpenAI](../entities/openai.md) [STATED]
+- [Scaling Laws](../concepts/scaling-laws.md) [INFERRED]

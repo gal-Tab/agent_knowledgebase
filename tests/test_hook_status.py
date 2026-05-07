@@ -57,6 +57,23 @@ Wiki: 5 pages (3s/1e/1c/0x)"""
         assert result["pending_files"] == ["half-done.pdf"]
         assert result["has_work"] is True
 
+    def test_quarantine_count_parsed(self):
+        output = """=== KB Status ===
+No new or updated files in raw/
+Quarantine: 3 pages awaiting manual review
+Last session: (none)
+Wiki: 5 pages (3s/1e/1c/0x)"""
+        result = parse_hook_output(output)
+        assert result["quarantine_count"] == 3
+
+    def test_quarantine_count_default_zero(self):
+        output = """=== KB Status ===
+No new or updated files in raw/
+Last session: (none)
+Wiki: 5 pages (3s/1e/1c/0x)"""
+        result = parse_hook_output(output)
+        assert result["quarantine_count"] == 0
+
     def test_multiple_new_files(self):
         output = """=== KB Status ===
 New files in raw/: a.pdf, b.md, c.txt

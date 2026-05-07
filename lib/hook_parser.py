@@ -27,6 +27,7 @@ def parse_hook_output(output_text: str) -> dict:
         "has_work": False,
         "action": None,
         "last_session": None,
+        "quarantine_count": 0,
         "wiki_stats": {
             "total": 0,
             "sources": 0,
@@ -71,6 +72,12 @@ def parse_hook_output(output_text: str) -> dict:
         if line.startswith("Last session: "):
             value = line[len("Last session: "):]
             result["last_session"] = None if value == "(none)" else value
+            continue
+
+        # Quarantine: "Quarantine: 3 pages awaiting manual review"
+        q_match = re.match(r"Quarantine:\s*(\d+)\s*pages?", line)
+        if q_match:
+            result["quarantine_count"] = int(q_match.group(1))
             continue
 
         # Wiki stats: "Wiki: 35 pages (15s/12e/6c/2x)"
