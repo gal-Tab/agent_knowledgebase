@@ -8,7 +8,8 @@ domain_tags:
   - "machine-learning"
   - "training"
 source_refs:
-  - "scaling-laws-neural-lm"
+  - slug: "scaling-laws-neural-lm"
+    confidence: STATED
 created: 2026-04-01
 updated: 2026-04-01
 tags:
@@ -30,5 +31,5 @@ First systematically characterized by Kaplan et al. (2020) at OpenAI, scaling la
 
 ## See Also
 
-- [Jared Kaplan](../entities/kaplan-jared.md)
-- [OpenAI](../entities/openai.md)
+- [Jared Kaplan](../entities/kaplan-jared.md) [STATED]
+- [OpenAI](../entities/openai.md) [STATED]

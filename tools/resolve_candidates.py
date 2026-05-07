@@ -8,10 +8,10 @@ import sys
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).parent.parent
-sys.path.insert(0, str(PROJECT_ROOT / "lib"))
+sys.path.insert(0, str(PROJECT_ROOT))
 
-from slug import slug_entity, slug_concept
-from page_format import parse_frontmatter
+from lib.page_format import parse_frontmatter
+from lib.slug import slug_concept, slug_entity
 
 _ENTITY_RE = re.compile(
     r"^- Entity:\s*(.+?)\s*—\s*(.+?)\s*\(type:\s*(\w+)\)\s*$"
@@ -138,15 +138,25 @@ def _build_alias_map(wiki_path: Path) -> dict[str, str]:
 
 
 def _get_existing_source_refs(page_path: Path) -> list[str]:
-    """Read a wiki page and return its source_refs slugs."""
+    """Read a wiki page and return its source_refs slugs.
+
+    Supports both the canonical {slug, confidence} object form and the legacy
+    plain-string form (kept for transitional reads of pre-validation pages).
+    """
     if not page_path.exists():
         return []
     content = page_path.read_text()
     fm = parse_frontmatter(content)
     refs = fm.get("source_refs", [])
-    if isinstance(refs, list):
-        return [r if isinstance(r, str) else str(r) for r in refs]
-    return []
+    if not isinstance(refs, list):
+        return []
+    out: list[str] = []
+    for r in refs:
+        if isinstance(r, dict) and "slug" in r:
+            out.append(str(r["slug"]))
+        elif isinstance(r, str):
+            out.append(r)
+    return out
 
 
 def classify_candidates(
@@ -272,6 +282,63 @@ def format_brief(classified: dict) -> str:
     return "\n".join(sections).strip() + "\n"
 
 
+_FORMAT_CONTRACT = {
+    "source_refs": (
+        "list of {slug: str, confidence: STATED|INFERRED|UNCERTAIN} objects; "
+        "plain strings are rejected by validation"
+    ),
+    "links": (
+        "internal links must be relative ../{category}/{slug}.md form; "
+        "wiki-links [[slug]] and absolute paths are rejected"
+    ),
+    "see_also": (
+        "every line under '## See Also' must end with a confidence label "
+        "in brackets: [STATED] | [INFERRED] | [UNCERTAIN]"
+    ),
+    "frontmatter_required": [
+        "title", "type", "source_refs", "created", "updated",
+    ],
+}
+
+
+def _candidate_to_json(c: dict) -> dict:
+    """Project a classified candidate into the JSON-brief shape."""
+    out = {
+        "kind": c["kind"],
+        "name": c["name"],
+        "slug": c["slug"],
+        "attestations": [
+            {"source_slug": src, "claim": claim}
+            for src, claim in (c.get("descriptions") or {}).items()
+        ],
+    }
+    if c.get("entity_type"):
+        out["entity_type"] = c["entity_type"]
+    if "existing_slug" in c:
+        out["existing_slug"] = c["existing_slug"]
+    return out
+
+
+def format_brief_json(classified: dict, wiki_index: str) -> dict:
+    """Build the structured JSON brief envelope for a single batch.
+
+    The envelope is the resolver's complete contract: it gets the current wiki
+    index, the classified candidates, and an explicit format contract so the
+    LLM has structured rules instead of inferring them from prose examples.
+    """
+    return {
+        "schema_version": "1.0",
+        "wiki_index": wiki_index,
+        "batch": {
+            "create": [_candidate_to_json(c) for c in classified.get("create", [])],
+            "update": [_candidate_to_json(c) for c in classified.get("update", [])],
+            "skip":   [_candidate_to_json(c) for c in classified.get("skip", [])],
+            "stale":  list(classified.get("stale", [])),
+        },
+        "format_contract": _FORMAT_CONTRACT,
+    }
+
+
 def batch_candidates(
     classified: dict,
     max_sources: int = 5,
@@ -343,6 +410,12 @@ def main():
     parser.add_argument("manifest_path", type=Path, help="Path to raw/.manifest.json")
     parser.add_argument("--batch-size", type=int, default=5, help="Max sources per batch")
     parser.add_argument("--max-candidates", type=int, default=30, help="Max candidates per batch")
+    parser.add_argument(
+        "--format",
+        choices=("markdown", "json"),
+        default="markdown",
+        help="Output format. JSON emits NDJSON: one batch envelope per line.",
+    )
     args = parser.parse_args()
 
     manifest = {}
@@ -376,6 +449,16 @@ def main():
     classified = classify_candidates(deduped, args.wiki_path, manifest, recompiled or None)
 
     batches = batch_candidates(classified, args.batch_size, args.max_candidates)
+
+    if args.format == "json":
+        wiki_index_path = args.wiki_path / "index.md"
+        wiki_index = wiki_index_path.read_text() if wiki_index_path.exists() else ""
+        for batch in batches:
+            if not (batch["create"] or batch["update"] or batch["stale"]):
+                continue
+            envelope = format_brief_json(batch, wiki_index=wiki_index)
+            print(json.dumps(envelope))
+        return
 
     for i, batch in enumerate(batches):
         if i > 0:

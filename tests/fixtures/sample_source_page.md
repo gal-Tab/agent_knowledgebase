@@ -43,5 +43,5 @@ Experiments spanning models from 768 to 1.5 billion parameters, trained on 22 mi
 
 ## See Also
 
-- [Compute-Optimal Training](../concepts/compute-optimal-training.md)
-- [Scaling Laws](../concepts/scaling-laws.md)
+- [Compute-Optimal Training](../concepts/compute-optimal-training.md) [STATED]
+- [Scaling Laws](../concepts/scaling-laws.md) [STATED]

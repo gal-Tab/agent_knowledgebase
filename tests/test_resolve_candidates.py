@@ -5,7 +5,14 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "tools"))
-from resolve_candidates import parse_extracted_references, deduplicate_candidates, classify_candidates, format_brief, batch_candidates
+from resolve_candidates import (
+    batch_candidates,
+    classify_candidates,
+    deduplicate_candidates,
+    format_brief,
+    format_brief_json,
+    parse_extracted_references,
+)
 
 
 class TestParseExtractedReferences:
@@ -315,6 +322,66 @@ class TestCLI:
         assert "## CREATE" in proc.stdout
         assert "Ashish Vaswani" in proc.stdout
 
+    def test_json_format_emits_structured_brief(
+        self, tmp_path, source_with_refs, sample_index
+    ):
+        wiki = tmp_path / "wiki"
+        for subdir in ("sources", "entities", "concepts", "comparisons"):
+            (wiki / subdir).mkdir(parents=True)
+        (wiki / "index.md").write_text(sample_index)
+
+        results_dir = tmp_path / "raw" / ".compile-results"
+        results_dir.mkdir(parents=True)
+
+        (wiki / "sources" / "attention-paper.md").write_text(source_with_refs)
+
+        import json
+        (results_dir / "attention-paper.json").write_text(json.dumps({
+            "source_file": "attention-paper.pdf",
+            "slug": "attention-paper",
+            "source_page": "wiki/sources/attention-paper.md",
+            "status": "success",
+        }))
+
+        manifest = tmp_path / "raw" / ".manifest.json"
+        manifest.write_text("{}")
+
+        script = str(Path(__file__).parent.parent / "tools" / "resolve_candidates.py")
+        proc = subprocess.run(
+            ["python3", script, str(wiki), str(results_dir), str(manifest), "--format=json"],
+            capture_output=True, text=True, cwd=str(Path(__file__).parent.parent),
+        )
+        assert proc.returncode == 0, proc.stderr
+        # NDJSON: one JSON object per batch.
+        lines = [ln for ln in proc.stdout.splitlines() if ln.strip()]
+        assert len(lines) >= 1
+        first = json.loads(lines[0])
+        assert first["schema_version"] == "1.0"
+        assert "wiki_index" in first
+        assert "batch" in first
+        assert "format_contract" in first
+        assert "create" in first["batch"]
+        assert any(c["name"] == "Ashish Vaswani" for c in first["batch"]["create"])
+
+    def test_json_format_no_candidates_emits_nothing(self, tmp_path, sample_index):
+        wiki = tmp_path / "wiki"
+        for subdir in ("sources", "entities", "concepts", "comparisons"):
+            (wiki / subdir).mkdir(parents=True)
+        (wiki / "index.md").write_text(sample_index)
+        results_dir = tmp_path / "raw" / ".compile-results"
+        results_dir.mkdir(parents=True)
+        manifest = tmp_path / "raw" / ".manifest.json"
+        manifest.write_text("{}")
+
+        script = str(Path(__file__).parent.parent / "tools" / "resolve_candidates.py")
+        proc = subprocess.run(
+            ["python3", script, str(wiki), str(results_dir), str(manifest), "--format=json"],
+            capture_output=True, text=True, cwd=str(Path(__file__).parent.parent),
+        )
+        assert proc.returncode == 0
+        assert proc.stdout.strip() == ""
+
+
     def test_no_candidates_empty_output(self, tmp_path, sample_index):
         wiki = tmp_path / "wiki"
         for subdir in ("sources", "entities", "concepts"):
@@ -342,3 +409,37 @@ class TestCLI:
         )
         assert proc.returncode == 0
         assert proc.stdout.strip() == ""
+
+
+class TestFormatBriefJson:
+    def test_envelope_keys(self):
+        classified = {
+            "create": [{"kind": "entity", "name": "X", "slug": "x",
+                        "entity_type": "person", "sources": ["src-a"],
+                        "descriptions": {"src-a": "researcher"}}],
+            "update": [], "skip": [], "stale": [],
+        }
+        out = format_brief_json(classified, wiki_index="# Index\n")
+        assert out["schema_version"] == "1.0"
+        assert out["wiki_index"] == "# Index\n"
+        assert "format_contract" in out
+        assert out["batch"]["create"][0]["slug"] == "x"
+
+    def test_attestations_per_source(self):
+        classified = {
+            "create": [{"kind": "concept", "name": "Y", "slug": "y",
+                        "sources": ["src-a", "src-b"],
+                        "descriptions": {"src-a": "claim-a", "src-b": "claim-b"}}],
+            "update": [], "skip": [], "stale": [],
+        }
+        out = format_brief_json(classified, wiki_index="")
+        attests = out["batch"]["create"][0]["attestations"]
+        assert {a["source_slug"] for a in attests} == {"src-a", "src-b"}
+
+    def test_format_contract_describes_required_shapes(self):
+        out = format_brief_json({"create": [], "update": [], "skip": [], "stale": []},
+                                wiki_index="")
+        contract = out["format_contract"]
+        assert "source_refs" in contract
+        assert "links" in contract
+        assert "see_also" in contract

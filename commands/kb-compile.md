@@ -255,11 +255,27 @@ For each result file, read the JSON. Expected structure:
 
 **If `status: "failed"`:** Log the failure. Set the file's manifest entry to `"failed"` with the error message. Continue with successful files.
 
+### 5a: Validate Source Pages (pre-write gate)
+
+For each successful result, validate the worker-produced source page before accepting it:
+
+```bash
+python3 tools/validate_wiki.py wiki/sources/{slug}.md
+```
+
+If exit code is non-zero, the worker produced a malformed page. Treat this as `status: "failed_validation"`:
+- Do NOT advance the manifest entry to `compiled` for this file
+- Do NOT include this source in Step 6 candidate collection
+- Log the validator's stdout (it lists the specific schema violations) so the user can re-run extraction with a corrected worker prompt
+
+Track the set of source pages that passed validation — only those participate in Step 6.
+
 Tell the user per file:
 - Success: `"Extracted: {filename} → {source_page}"`
-- Failure: `"Failed: {filename} — {error}"`
+- Failure (extraction): `"Failed: {filename} — {error}"`
+- Failure (validation): `"Failed validation: {filename} — see validator output above"`
 
-**If ALL files failed:** Update the manifest with failure statuses (Step 8b), report failures (Step 10), and stop. Do not attempt entity resolution, link validation, or git commit — there are no wiki pages to process.
+**If ALL files failed (extraction or validation):** Update the manifest with failure statuses (Step 8b), report failures (Step 10), and stop. Do not attempt entity resolution, link validation, or git commit — there are no wiki pages to process.
 
 ---
 
@@ -269,27 +285,54 @@ Batch resolution: collect all candidates from source pages, deduplicate in code,
 
 ### 6a: Collect and Classify
 
-Run the resolution script to parse, deduplicate, and classify all candidates:
+Run the resolution script to parse, deduplicate, and classify all candidates as a structured JSON brief (one envelope per batch, NDJSON):
 
 ```bash
-python3 tools/resolve_candidates.py wiki/ raw/.compile-results/ raw/.manifest.json --batch-size 5 --max-candidates 30
+python3 tools/resolve_candidates.py wiki/ raw/.compile-results/ raw/.manifest.json \
+  --batch-size 5 --max-candidates 30 --format=json
 ```
 
-Capture stdout. If the output is empty (all candidates are SKIPs or no Extracted References found), tell the user `"All entities/concepts already up to date."` and skip to Step 7.
+Capture stdout. Each non-empty line is a JSON envelope with this shape:
 
-If the output contains `---BATCH---` delimiters, split into separate batches and process each sequentially via Step 6b.
+```json
+{
+  "schema_version": "1.0",
+  "wiki_index": "...",
+  "batch": {
+    "create": [{"kind": "entity|concept", "name": "...", "slug": "...",
+                "entity_type": "person|org|...", "attestations": [
+                  {"source_slug": "...", "claim": "..."}
+                ]}],
+    "update": [{...with "existing_slug": "..."}],
+    "skip":   [...],
+    "stale":  [{"slug": "...", "page": "...", "reason": "..."}]
+  },
+  "format_contract": {
+    "source_refs": "...",
+    "links": "...",
+    "see_also": "...",
+    "frontmatter_required": [...]
+  }
+}
+```
 
-### 6b: Resolve (one LLM call per batch)
+If stdout is empty (all candidates are SKIPs or no Extracted References found), tell the user `"All entities/concepts already up to date."` and skip to Step 7.
 
-For each batch, assemble the resolution prompt in this exact order (cache-optimized — prefix is static across batches):
+For each line (one batch), process via Step 6b sequentially.
+
+### 6b: Resolve (one LLM call per batch, validated writes)
+
+For each batch envelope, dispatch the resolver with the JSON brief as the variable tail. The cacheable prefix is static across batches.
 
 **Prompt structure:**
 
 ```
 [CACHEABLE PREFIX]
 
-You are resolving entity and concept candidates into wiki pages.
-All candidates have been pre-classified — follow the classification exactly.
+You are resolving entity and concept candidates into wiki pages. All candidates
+have been pre-classified — follow the classification exactly. The format
+contract in the brief is enforced by a pre-write validator: pages that violate
+it will be rejected and you will be re-prompted with the validator's errors.
 
 ## Domain Rules
 
@@ -297,44 +340,86 @@ All candidates have been pre-classified — follow the classification exactly.
 
 ## Resolution Instructions
 
-For each CREATE candidate:
-1. Generate the full page (frontmatter + all sections + ## See Also with confidence labels)
-2. Write it to wiki/{entities|concepts}/{slug}.md using the Write tool
-3. Cross-reference other candidates in this batch freely — they will all exist after this pass
-4. Assign confidence labels (STATED/INFERRED/UNCERTAIN) per wiki-schema.md rules
+For each CREATE candidate in batch.create:
+  - Generate the full page (frontmatter + sections + `## See Also` with [CONFIDENCE] labels).
+  - Write to `wiki/{entities|concepts}/{slug}.md` using the Write tool.
+  - Cross-reference other candidates in this batch freely — they will all exist after this pass.
+  - Apply the format_contract literally:
+      source_refs: list of {slug, confidence} OBJECTS (not plain strings)
+      links: relative `../{category}/{slug}.md` only (NOT [[wiki-links]])
+      see_also: every line ends with [STATED|INFERRED|UNCERTAIN]
 
-For each UPDATE candidate:
-1. Read the existing page at wiki/{category}/{existing_slug}.md using the Read tool
-2. Add the new source to the source_refs frontmatter
-3. Add a new bullet under Source Appearances with the new source context
-4. Update ## See Also if the new source reveals new relationships
-5. Use Edit to append — never rewrite existing content
-6. If the new source contradicts existing content, flag inline:
-   **[Contradiction]** Source A claims X, but Source B claims Y.
+For each UPDATE candidate in batch.update:
+  - Read the existing page at `wiki/{category}/{existing_slug}.md`.
+  - Append the new source to source_refs frontmatter (object form).
+  - Add a bullet under Source Appearances with the new source context.
+  - Extend `## See Also` if the new source reveals new relationships.
+  - Use Edit (never rewrite).
+  - On contradiction: **[Contradiction]** Source A claims X, but Source B claims Y.
 
-For STALE entries:
-- Take no action. These are logged for human review only.
+For STALE entries: no action — logged for human review.
 
-After processing all candidates, output a decision summary. One line per candidate:
-{name} | {action: created/updated/skipped} | {reason}
-
-## Current Wiki Index
-
-{Insert current wiki/index.md content}
+After all writes, output a decision summary, one line per candidate:
+  {name} | {action: created|updated|skipped} | {reason}
 
 [VARIABLE TAIL]
 
-## Resolution Brief
+## Resolution Brief (this batch)
 
-{Insert stdout from Step 6a — the batch being processed}
+{Insert the JSON envelope for this batch}
 ```
+
+### 6b-validate: Pre-write gate
+
+After the resolver returns, validate every page it touched in this batch:
+
+```bash
+python3 tools/validate_wiki.py {space-separated paths from batch.create + batch.update}
+```
+
+If exit code is 0, the batch is clean — proceed to 6c.
+
+If exit code is non-zero, capture the validator's stdout (lists per-path errors) and **dispatch a single retry** with this prompt:
+
+```
+The resolver writes for this batch failed format validation. Re-write only
+the pages listed below with the violations corrected. Do not touch any other
+pages. The format_contract is the same as before; pay special attention to
+the listed errors.
+
+## Failed pages and errors
+
+{paste validator stdout verbatim}
+
+## Original brief (for context)
+
+{re-insert the same JSON envelope}
+```
+
+After the retry, re-run validate_wiki.py on the same paths. Pages that still fail are quarantined:
+
+For each still-failing page `wiki/{category}/{slug}.md`:
+
+```bash
+# Save the failing content to a temp file
+cp wiki/{category}/{slug}.md /tmp/q-content.md
+# Save the errors as a JSON list
+python3 tools/validate_wiki.py wiki/{category}/{slug}.md > /tmp/q-errors.txt 2>&1 || true
+# Move to quarantine and revert the wiki file from git (or rm if it was a CREATE)
+python3 tools/quarantine_page.py move \
+  wiki/{category}/{slug}.md /tmp/q-content.md /tmp/q-errors.txt --wiki-root wiki
+git checkout wiki/{category}/{slug}.md 2>/dev/null || rm -f wiki/{category}/{slug}.md
+```
+
+Tell the user per quarantined page:
+`"Quarantined: wiki/{category}/{slug}.md — see wiki/.quarantine/{category}/{slug}.errors.json"`
 
 ### 6c: Clean Up and Trace
 
-After resolution completes:
+After resolution + validation completes:
 
 1. Remove `## Extracted References` from each source page (Edit out the section)
-2. Capture the LLM's decision summary lines and write to `raw/.compile-results/resolution-trace.json`:
+2. Capture the LLM's decision summary lines and write to `raw/.compile-results/resolution-trace.json`. Include validation outcomes per page (`validated|retried|quarantined`):
 
 ```json
 {
@@ -441,6 +526,30 @@ If `tools/generate-graph.py` is not available (e.g., not copied during kb-init),
 ---
 
 ## Step 9: Git Commit
+
+### 9a: Pre-commit validation pass
+
+Before staging, validate every wiki page that changed in this run. Use `git status` to find changed paths under `wiki/`, then:
+
+```bash
+python3 tools/validate_wiki.py $(git diff --name-only --diff-filter=ACM HEAD -- 'wiki/*.md') \
+                                $(git ls-files --others --exclude-standard -- 'wiki/*.md')
+```
+
+If exit code is non-zero, **block the commit**. Report the validator output to the user and stop. Do not stage, do not commit. The user must either:
+  - Manually fix the malformed pages and re-run kb-compile (at which point validation will pass)
+  - Move the offending pages to quarantine via `python3 tools/quarantine_page.py move ...`
+
+If the wiki has any quarantined pages, surface them as a warning (do NOT block):
+
+```bash
+python3 tools/quarantine_page.py count --wiki-root wiki
+```
+
+If the count is > 0:
+`"Warning: {N} pages in wiki/.quarantine/ awaiting manual review (run: python3 tools/quarantine_page.py list --wiki-root wiki)"`
+
+### 9b: Stage and commit
 
 Stage all changed files in `wiki/`, `raw/.manifest.json`. Single commit:
 
