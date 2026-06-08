@@ -1,9 +1,9 @@
 # HANDOFF — Compound Learnings (kw-* subsystem)
 
-**Branch:** `feat/compound-learnings` (based on `fix/step6-resolution-prompt`, NOT main)
+**Branch:** `feat/compound-learnings-phase2` (off `main`; Phase 1 landed on main via PR #8)
 **Plan (HTML):** `docs/plans/2026-06-08-compound-learnings.html` (local only — `docs/` is gitignored)
 **Plan (md, source of truth):** `~/.claude/plans/in-a-new-branch-eager-dragonfly.md`
-**Last updated:** 2026-06-08
+**Last updated:** 2026-06-08 (Phase 2 retrieval complete)
 
 ## What this is
 
@@ -32,7 +32,7 @@ token-frugally, so the agent improves across every project. It lives beside the 
 - Run tests with **`python3.13 -m pytest -q`** (this interpreter has pytest + PyYAML).
 - The default `python3` is 3.14 and needed PyYAML for the CLI subprocess tests:
   `python3 -m pip install --break-system-packages pyyaml` (already done in this env).
-- Baseline before this work: 181 tests. After Phase 1: **235 passing.**
+- Baseline before this work: 181 tests. After Phase 1: **235 passing.** After Phase 2: **262 passing.**
 
 ## DONE — Phase 1 (write side), all committed + tested
 
@@ -53,23 +53,23 @@ Store layout (runtime-created): `<root>/{insights,playbooks,corrections,patterns
 plus `.archive/` and `.drafts/`; index at `<root>/index.md`. Index line schema:
 `- [CODE] id | tags | headline | confidence | date` (codes I/P/C/Pa).
 
-## TODO — Phase 2 (retrieval) — DO THIS NEXT
+## DONE — Phase 2 (retrieval), all committed + tested (262 passing)
 
-1. `hooks/kw-surface` (bash, mirror `hooks/kb-status`): UserPromptSubmit hook.
-   - Guard: exit 0 if no project/global `index.md` exists.
-   - Read prompt from stdin → tokenize → intersect with index tag column → score
-     (tag hits + correction bonus). If < threshold (2 hits, or 1 on a correction) → exit 0.
-   - Else emit ≤3 headline lines (corrections → score → recency), headline-only, ~70–90 token cap.
-   - Per-session dedup via `$TMPDIR/kw-surface-<session>.seen`.
-   - Tests: `tests/test_kw_surface_hook.py` (test the parse/gating helper; mirror `tests/test_hook_status.py`).
-2. `skills/kw-recall/SKILL.md` — inline read skill (merge both tiers, index-first, ≤5 bodies on
-   demand, cite ids). Mirror `skills/kb-query/SKILL.md` frontmatter + `allowed-tools: Read, Glob, Grep`.
-3. `hooks/hooks.json` — add `kw-surface prompt` as a SECOND entry in `UserPromptSubmit` (alongside
-   `kb-status prompt`); add a `Stop` block invoking `kw-capture stop` (for Phase 3). Each guards
-   independently. Current hooks.json structure: arrays of `{hooks:[{type:command, command:"...run-hook.cmd X Y"}]}`.
-4. `skills/kb-query/SKILL.md` — after identifying wiki pages, also grep the learnings `index.md`
-   (both tiers); surface a matching correction/playbook, read body only if it sharpens the answer
-   (within the existing 5-read cap). Keep a router note for pure learning-questions → `kw-recall`.
+| File | Notes |
+|------|-------|
+| `lib/learning_surface.py` | pure gating logic: `extract_tokens`, `count_tag_hits`, `qualifies` (≥2 hits, or ≥1 for corrections), `select` (corrections→hits→recency, cap 3, seen-exclusion), `render` (headline-only block), `surface` (merge tiers project-shadows-global → select → render → ids). Tests: `tests/test_kw_surface_hook.py` (27) |
+| `hooks/kw-surface` | UserPromptSubmit bash hook. Cheap bash guard (no project/global `index.md` → exit 0, no python). Reads payload via env (stdin owned by heredoc), one python pass → `surface()`, prints ≤3 headlines, records surfaced ids in `$TMPDIR/kw-surface-<session>.seen` for dedup. |
+| `hooks/kw-capture` | **Phase 2 stub** — Stop hook wiring in place but detection is a no-op (`exit 0`; guards on `.compound/` absence). Phase 3 fleshes out compoundable-moment detection + draft staging. |
+| `hooks/hooks.json` | `kw-surface prompt` added as 2nd `UserPromptSubmit` entry (coexists w/ `kb-status`, each guards independently); `Stop` block → `kw-capture stop`. |
+| `skills/kw-recall/SKILL.md` | index-first read-only recall skill (`Read, Glob, Grep`); merges both tiers, ≤5 bodies on demand, cites ids+scope. |
+| `skills/kb-query/SKILL.md` | new step 3: cheap index-grep of learnings (both tiers), surface matching correction/playbook, body only if it sharpens the answer (within 5-read cap); router note → `kw-recall`. |
+
+Verified: matching prompt injects ≤3 headlines (~43–90 tokens); generic prompt → nothing;
+same id not re-injected in a session; no store → both hooks `exit 0` silent; `kb-status` +
+`kw-surface` coexist on `UserPromptSubmit` without interfering.
+
+**Phase 3 note:** `hooks/kw-capture` already exists as a guarded no-op — Phase 3 fills in
+detection there (don't recreate it) and wires `tools/resolve_learnings.py`.
 
 ## TODO — Phase 3 (auto-capture + scale)
 
