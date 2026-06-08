@@ -1,9 +1,9 @@
 # HANDOFF — Compound Learnings (kw-* subsystem)
 
-**Branch:** `feat/compound-learnings-phase2` (off `main`; Phase 1 landed on main via PR #8)
+**Branch:** `feat/compound-learnings-phase3` (off `main`; Phases 1+2 landed via PRs #8, #9)
 **Plan (HTML):** `docs/plans/2026-06-08-compound-learnings.html` (local only — `docs/` is gitignored)
 **Plan (md, source of truth):** `~/.claude/plans/in-a-new-branch-eager-dragonfly.md`
-**Last updated:** 2026-06-08 (Phase 2 retrieval complete)
+**Last updated:** 2026-06-08 (Phase 3 complete — feature done)
 
 ## What this is
 
@@ -32,7 +32,7 @@ token-frugally, so the agent improves across every project. It lives beside the 
 - Run tests with **`python3.13 -m pytest -q`** (this interpreter has pytest + PyYAML).
 - The default `python3` is 3.14 and needed PyYAML for the CLI subprocess tests:
   `python3 -m pip install --break-system-packages pyyaml` (already done in this env).
-- Baseline before this work: 181 tests. After Phase 1: **235 passing.** After Phase 2: **262 passing.**
+- Baseline before this work: 181 tests. After Phase 1: **235 passing.** After Phase 2: **262 passing.** After Phase 3: **292 passing**, then **307** after the QA-driven hardening (user-turn filtering + bash hook tests + CLI tests).
 
 ## DONE — Phase 1 (write side), all committed + tested
 
@@ -71,18 +71,18 @@ same id not re-injected in a session; no store → both hooks `exit 0` silent; `
 **Phase 3 note:** `hooks/kw-capture` already exists as a guarded no-op — Phase 3 fills in
 detection there (don't recreate it) and wires `tools/resolve_learnings.py`.
 
-## TODO — Phase 3 (auto-capture + scale)
+## DONE — Phase 3 (auto-capture + scale), all committed + tested (307 passing)
 
-5. `hooks/kw-capture` (Stop hook): conservative compoundable-moment detection (user-correction
-   language, bug→fix arc, blessed procedure); stage ≤3 drafts in `.drafts/`; print review directive.
-   NEVER promotes/silent-saves. Drafts excluded from index.
-6. `tools/resolve_learnings.py` + `tests/test_resolve_learnings.py`: dedup-on-write +
-   CREATE/UPDATE/SKIP/SUPERSEDE, mirroring `tools/resolve_candidates.py`. "Corrections always win":
-   contradicting correction sets old entry `status: superseded` + `superseded_by`, calls
-   `learning_store.move_to_archive`, drops it from the index.
-7. `commands/kw-compound.md` `--audit`: flesh out staleness sweep + `rebuild`.
-8. `skills/kw-researcher/SKILL.md`: planning-time subagent, `Read/Glob/Grep` only (no writes),
-   greps both indexes, returns synthesized cited brief in its own token budget.
+| File | Notes |
+|------|-------|
+| `lib/learning_capture.py` | pure conservative detector: `extract_user_text` (keep only the human's transcript turns — drops assistant text + tool output so they can't false-trigger), `scan_transcript` (user-correction → correction; blessed → playbook), `scan_git_subjects` (fix/revert → bugfix arc), `detect_signal` (priority correction > playbook > insight; None otherwise). Tests: `tests/test_kw_capture_hook.py` (23) |
+| `hooks/kw-capture` | Stop hook, now live. Opt-in guard (`.compound/` must exist), once-per-session throttle (`$TMPDIR/kw-capture-<session>.done`; marker write can't crash the hook), gathers recent git subjects + a user-filtered transcript tail → `detect_signal` → stages ONE draft stub in `.drafts/` on the FIRST signal per session. Never writes a real learning, never indexes, never promotes. (Plan's "≤3 drafts" ceiling; one stub is the conservative choice. Not a true session-end gate — see hook comments.) Bash-level tests: `tests/test_kw_capture_hook_bash.py` (5) |
+| `tools/resolve_learnings.py` | dedup-on-write classifier keyed on topic-slug: `classify_learning` → CREATE/UPDATE/SKIP/SUPERSEDE; `supersede()` stamps old `status: superseded`+`superseded_by`, archives, rebuilds index. "Corrections always win." CLI dry-run by default, `--apply` performs archival. Tests: `tests/test_resolve_learnings.py` (14) |
+| `commands/kw-compound.md` | Step 3 wired to `resolve_learnings.py`; `--review` handles auto-stubs; `--audit` = rebuild + staleness + contradiction sweep (archive-not-delete). |
+| `skills/kw-researcher/SKILL.md` | planning-time read-only subagent (`Read/Glob/Grep`): sweeps both tiers in its own budget, returns synthesized cited brief (corrections first). |
+| `README.md`, `plugin.json`, `marketplace.json` | recall skills documented; bumped to **0.3.0**. |
+
+**Feature complete:** capture (manual + auto) · token-frugal retrieval · dedup/supersede · audit/scale.
 
 ## Reuse map (mirror, don't reinvent)
 

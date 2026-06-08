@@ -2,24 +2,117 @@
 # LLM Wiki Agent — Compound Learnings Capture Hook (kw-*)
 # Called by Stop via run-hook.cmd.
 #
-# PHASE 2 STUB: wiring is in place but detection is intentionally a no-op.
-# Phase 3 implements conservative compoundable-moment detection (explicit
-# user-correction language, a bug→fix arc, a user-blessed procedure) and stages
-# at most a few drafts in .compound/.drafts/ for one-tap approval. It will NEVER
-# promote or silent-save — capture is always approval-gated via /kw-compound.
+# Conservative auto-capture: detect a compoundable moment (explicit user
+# correction, a user-blessed procedure, or a bug→fix arc) and stage a SINGLE
+# draft stub in .compound/.drafts/ for later approval via `/kw-compound --review`.
+# It NEVER writes a real learning, never touches the index, and never promotes —
+# capture is always approval-gated. (The plan allows up to 3 drafts; one stub on
+# the first signal is the deliberately conservative choice for this phase.)
 #
-# Until then this exits 0 so the Stop hook adds zero overhead and never errors.
+# Zero-overhead / opt-in: if the project has no .compound/ store this exits 0
+# immediately (auto-capture turns on only once a project uses compound learnings).
+# Stop fires every turn, so this is throttled to ONE draft per session via a
+# $TMPDIR marker: it stages on the FIRST detected signal in a session, then stays
+# quiet. (Not a true "session-end" gate — that would need turn/exit signals the
+# Stop payload doesn't carry.) Only the *user's* transcript text drives detection
+# (lib/learning_capture.extract_user_text), so the assistant's own words and tool
+# output can't trigger a false stub.
 #
 # Usage: kw-capture <stop>
 set -eo pipefail
 
 PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
+STORE="$PROJECT_DIR/.compound"
+DRAFTS="$STORE/.drafts"
 
-# Zero-overhead guard: no project store → nothing to capture into. (Phase 3 will
-# additionally guard on the absence of any compoundable signal before drafting.)
-if [ ! -d "$PROJECT_DIR/.compound" ]; then
-    exit 0
+# Opt-in guard: no project store → do nothing, cost nothing.
+[ -d "$STORE" ] || exit 0
+command -v python3 &>/dev/null || exit 0
+
+INPUT=$(cat)
+
+# Resolve session id (for the once-per-session throttle) and transcript path.
+read -r SESSION TRANSCRIPT < <(
+    KW_INPUT="$INPUT" python3 -c '
+import json, os, sys
+try:
+    p = json.loads(os.environ.get("KW_INPUT", ""))
+except Exception:
+    print("nosession ")
+    sys.exit(0)
+print((p.get("session_id") or "nosession"), (p.get("transcript_path") or ""))
+' 2>/dev/null || echo "nosession "
+)
+
+TMP="${TMPDIR:-/tmp}"
+SAFE_SESSION=$(printf '%s' "$SESSION" | tr -c 'A-Za-z0-9._-' '_')
+MARKER="$TMP/kw-capture-${SAFE_SESSION}.done"
+
+# Already staged a draft this session → done (avoid re-drafting each turn).
+[ -f "$MARKER" ] && exit 0
+
+# Cheap signals: recent commit subjects + a bounded transcript tail.
+GIT_SUBJECTS=""
+if git -C "$PROJECT_DIR" rev-parse --git-dir &>/dev/null; then
+    GIT_SUBJECTS=$(git -C "$PROJECT_DIR" log --format=%s -15 2>/dev/null || echo "")
+fi
+TRANSCRIPT_TAIL=""
+if [ -n "$TRANSCRIPT" ] && [ -f "$TRANSCRIPT" ]; then
+    TRANSCRIPT_TAIL=$(tail -c 20000 "$TRANSCRIPT" 2>/dev/null || echo "")
 fi
 
-# Phase 3: detect compoundable moments here and stage drafts. No-op for now.
-exit 0
+# Detect (pure logic in lib/learning_capture); TSV "<type>\t<signal>\t<evidence>".
+SIGNAL=$(
+    KW_GIT="$GIT_SUBJECTS" KW_TRANSCRIPT="$TRANSCRIPT_TAIL" \
+    PYTHONPATH="$PLUGIN_ROOT" python3 -m lib.learning_capture 2>/dev/null || echo ""
+)
+[ -n "$SIGNAL" ] || exit 0
+
+LTYPE=$(printf '%s' "$SIGNAL" | cut -f1)
+LSIGNAL=$(printf '%s' "$SIGNAL" | cut -f2)
+LEVIDENCE=$(printf '%s' "$SIGNAL" | cut -f3)
+
+# Stage one draft stub (pending approval; .drafts/ is excluded from the index).
+TODAY=$(date +%Y-%m-%d)
+STAMP=$(date +%Y%m%d-%H%M%S)
+mkdir -p "$DRAFTS"
+DRAFT="$DRAFTS/auto-${STAMP}-${LTYPE}.md"
+
+cat > "$DRAFT" <<EOF
+---
+id:
+type: ${LTYPE}
+scope: project
+headline: ""
+tags: []
+confidence: STATED
+created: ${TODAY}
+updated: ${TODAY}
+status: active
+supersedes: []
+superseded_by: null
+---
+
+<!-- AUTO-DETECTED draft stub (signal: ${LSIGNAL}). NOT yet a saved learning.
+     Evidence: ${LEVIDENCE}
+     Run /kw-compound --review to synthesize a real headline + body, classify
+     scope, and file it (validated, approval-gated). Discard if not worth keeping. -->
+
+## Learning
+<!-- 1–3 sentences: the durable lesson from this session. -->
+
+## Context
+<!-- When/where it applies; the trigger conditions. -->
+
+## Implication
+<!-- What to do differently next time. -->
+EOF
+
+# Record the throttle marker; a failure here must never crash the Stop hook
+# (worst case without it: the stub is re-staged on a later turn).
+touch "$MARKER" 2>/dev/null || true
+
+echo "=== Compound Learnings ==="
+echo "Detected a compoundable moment (${LSIGNAL}). Staged a draft stub at ${DRAFT#$PROJECT_DIR/}."
+echo "Run /kw-compound --review to approve, edit, or discard it."
