@@ -106,8 +106,28 @@ You can also customize entity types, page sections, creation thresholds, and com
 |---------|-------------|
 | `/kb-init` | Initialize a knowledge base in the current project |
 | `/kb-compile` | Compile new or updated files from raw/ into wiki pages |
+| `/kw-compound` | Capture work-lessons (corrections, playbooks, insights, patterns) into the compound-learnings store |
 
 The `kb-query` skill auto-invokes when you ask domain questions — no command needed.
+
+## Compound Learnings
+
+Beyond ingesting source documents, the plugin captures the agent's **own work-lessons**
+so it improves over time — across every project it's installed in.
+
+- **Types:** `correction` (a mistake not to repeat), `playbook` (a process that worked),
+  `insight`, `pattern`.
+- **Two tiers:** lessons land in the project store `.compound/` by default (committed,
+  team-shareable). A lesson that genuinely generalizes can be promoted — with explicit
+  approval — to the global store `~/.claude/compound-knowledge/` (override with
+  `$COMPOUND_KNOWLEDGE_HOME`), which travels with you across repos.
+- **Capture:** run `/kw-compound` (or approve auto-detected drafts at session end).
+  Nothing is ever saved without approval; preferences/behaviors are redirected to MEMORY.
+- **Token-frugal retrieval:** a compact `index.md` (one line per lesson) is grepped, never
+  loaded whole; relevant lessons surface as ≤3 headlines only when they match, with bodies
+  fetched on demand. Zero overhead when no store exists.
+
+See `templates/learning-schema.md` for the full contract.
 
 ## Supported Formats
 

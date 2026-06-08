@@ -88,6 +88,22 @@ def slug_concept(name: str) -> str:
     return _normalize(name)
 
 
+def slug_learning(headline: str) -> str:
+    """Generate the slug component for a compound learning from its headline.
+
+    Lowercase, hyphens only, stopwords stripped (first word always kept),
+    capped at MAX_SLUG_LENGTH. The full learning id is built from this as
+    `kw-{date}-{slug}` (see lib/learning_store.learning_id).
+
+    "Add jitter to retry backoff" → "add-jitter-retry-backoff"
+    """
+    if not headline or not headline.strip():
+        raise ValueError("headline cannot be empty")
+    words = headline.lower().split()
+    filtered = [words[0]] + [w for w in words[1:] if w not in _STOPWORDS]
+    return _normalize("-".join(filtered))
+
+
 def slug_comparison(a: str, b: str) -> str:
     """Generate slug for a comparison page.
 
