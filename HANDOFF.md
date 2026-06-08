@@ -32,7 +32,7 @@ token-frugally, so the agent improves across every project. It lives beside the 
 - Run tests with **`python3.13 -m pytest -q`** (this interpreter has pytest + PyYAML).
 - The default `python3` is 3.14 and needed PyYAML for the CLI subprocess tests:
   `python3 -m pip install --break-system-packages pyyaml` (already done in this env).
-- Baseline before this work: 181 tests. After Phase 1: **235 passing.** After Phase 2: **262 passing.** After Phase 3: **292 passing.**
+- Baseline before this work: 181 tests. After Phase 1: **235 passing.** After Phase 2: **262 passing.** After Phase 3: **292 passing**, then **307** after the QA-driven hardening (user-turn filtering + bash hook tests + CLI tests).
 
 ## DONE — Phase 1 (write side), all committed + tested
 
@@ -71,12 +71,12 @@ same id not re-injected in a session; no store → both hooks `exit 0` silent; `
 **Phase 3 note:** `hooks/kw-capture` already exists as a guarded no-op — Phase 3 fills in
 detection there (don't recreate it) and wires `tools/resolve_learnings.py`.
 
-## DONE — Phase 3 (auto-capture + scale), all committed + tested (292 passing)
+## DONE — Phase 3 (auto-capture + scale), all committed + tested (307 passing)
 
 | File | Notes |
 |------|-------|
-| `lib/learning_capture.py` | pure conservative detector: `scan_transcript` (user-correction → correction; blessed → playbook), `scan_git_subjects` (fix/revert → bugfix arc), `detect_signal` (priority correction > playbook > insight; None otherwise). Tests: `tests/test_kw_capture_hook.py` (16) |
-| `hooks/kw-capture` | Stop hook, now live. Opt-in guard (`.compound/` must exist), once-per-session throttle (`$TMPDIR/kw-capture-<session>.done`), gathers recent git subjects + transcript tail → `detect_signal` → stages ONE draft stub in `.drafts/`. Never writes a real learning, never indexes, never promotes. |
+| `lib/learning_capture.py` | pure conservative detector: `extract_user_text` (keep only the human's transcript turns — drops assistant text + tool output so they can't false-trigger), `scan_transcript` (user-correction → correction; blessed → playbook), `scan_git_subjects` (fix/revert → bugfix arc), `detect_signal` (priority correction > playbook > insight; None otherwise). Tests: `tests/test_kw_capture_hook.py` (23) |
+| `hooks/kw-capture` | Stop hook, now live. Opt-in guard (`.compound/` must exist), once-per-session throttle (`$TMPDIR/kw-capture-<session>.done`; marker write can't crash the hook), gathers recent git subjects + a user-filtered transcript tail → `detect_signal` → stages ONE draft stub in `.drafts/` on the FIRST signal per session. Never writes a real learning, never indexes, never promotes. (Plan's "≤3 drafts" ceiling; one stub is the conservative choice. Not a true session-end gate — see hook comments.) Bash-level tests: `tests/test_kw_capture_hook_bash.py` (5) |
 | `tools/resolve_learnings.py` | dedup-on-write classifier keyed on topic-slug: `classify_learning` → CREATE/UPDATE/SKIP/SUPERSEDE; `supersede()` stamps old `status: superseded`+`superseded_by`, archives, rebuilds index. "Corrections always win." CLI dry-run by default, `--apply` performs archival. Tests: `tests/test_resolve_learnings.py` (14) |
 | `commands/kw-compound.md` | Step 3 wired to `resolve_learnings.py`; `--review` handles auto-stubs; `--audit` = rebuild + staleness + contradiction sweep (archive-not-delete). |
 | `skills/kw-researcher/SKILL.md` | planning-time read-only subagent (`Read/Glob/Grep`): sweeps both tiers in its own budget, returns synthesized cited brief (corrections first). |

@@ -6,12 +6,17 @@
 # correction, a user-blessed procedure, or a bug→fix arc) and stage a SINGLE
 # draft stub in .compound/.drafts/ for later approval via `/kw-compound --review`.
 # It NEVER writes a real learning, never touches the index, and never promotes —
-# capture is always approval-gated.
+# capture is always approval-gated. (The plan allows up to 3 drafts; one stub on
+# the first signal is the deliberately conservative choice for this phase.)
 #
 # Zero-overhead / opt-in: if the project has no .compound/ store this exits 0
 # immediately (auto-capture turns on only once a project uses compound learnings).
-# Throttled to one auto-draft per session via a $TMPDIR marker so it does not
-# re-draft on every turn (Stop fires each turn, not just at session end).
+# Stop fires every turn, so this is throttled to ONE draft per session via a
+# $TMPDIR marker: it stages on the FIRST detected signal in a session, then stays
+# quiet. (Not a true "session-end" gate — that would need turn/exit signals the
+# Stop payload doesn't carry.) Only the *user's* transcript text drives detection
+# (lib/learning_capture.extract_user_text), so the assistant's own words and tool
+# output can't trigger a false stub.
 #
 # Usage: kw-capture <stop>
 set -eo pipefail
@@ -104,7 +109,9 @@ superseded_by: null
 <!-- What to do differently next time. -->
 EOF
 
-touch "$MARKER"
+# Record the throttle marker; a failure here must never crash the Stop hook
+# (worst case without it: the stub is re-staged on a later turn).
+touch "$MARKER" 2>/dev/null || true
 
 echo "=== Compound Learnings ==="
 echo "Detected a compoundable moment (${LSIGNAL}). Staged a draft stub at ${DRAFT#$PROJECT_DIR/}."

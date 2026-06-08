@@ -10,7 +10,14 @@ strongest signal (a correction), a user-blessed procedure is a playbook, and a
 bug→fix arc in recent commits is an insight. Priority: correction > playbook >
 insight. No signal → None (the common case → the hook does nothing).
 """
-from lib.learning_capture import detect_signal, scan_transcript, scan_git_subjects
+import json
+
+from lib.learning_capture import (
+    detect_signal,
+    scan_transcript,
+    scan_git_subjects,
+    extract_user_text,
+)
 
 
 class TestScanTranscript:
@@ -46,6 +53,47 @@ class TestScanGitSubjects:
 
     def test_empty(self):
         assert scan_git_subjects([]) is False
+
+
+class TestExtractUserText:
+    """Only the human's typed text should feed detection — not the assistant's
+    own words (which may quote correction phrases) and not tool output."""
+
+    def _line(self, role, content):
+        return json.dumps({"type": role, "message": {"role": role, "content": content}})
+
+    def test_user_string_content(self):
+        text = self._line("user", "no, that's wrong")
+        assert "no, that's wrong" in extract_user_text(text)
+
+    def test_user_text_blocks(self):
+        text = self._line("user", [{"type": "text", "text": "don't do that"}])
+        assert "don't do that" in extract_user_text(text)
+
+    def test_assistant_text_excluded(self):
+        text = self._line("assistant", [{"type": "text", "text": "that's wrong, I'll fix it"}])
+        assert extract_user_text(text) == ""
+
+    def test_tool_result_blocks_excluded(self):
+        # tool results carry role "user" in the API but are not human text
+        text = self._line("user", [{"type": "tool_result", "content": "that worked"}])
+        assert extract_user_text(text) == ""
+
+    def test_malformed_line_skipped(self):
+        good = self._line("user", "actually no, that's not right")
+        text = "{partial truncated json\n" + good
+        assert "that's not right" in extract_user_text(text)
+
+    def test_empty(self):
+        assert extract_user_text("") == ""
+
+    def test_only_user_turns_reach_detection(self):
+        # assistant says a correction phrase; user does not -> no signal
+        transcript = "\n".join([
+            self._line("assistant", [{"type": "text", "text": "no, that's wrong"}]),
+            self._line("user", [{"type": "text", "text": "great, thanks"}]),
+        ])
+        assert scan_transcript(extract_user_text(transcript)) is None
 
 
 class TestDetectSignal:

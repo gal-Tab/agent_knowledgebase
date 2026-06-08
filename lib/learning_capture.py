@@ -18,6 +18,7 @@ The bash hook gathers recent git subjects + a transcript tail and calls
 """
 from __future__ import annotations
 
+import json
 import re
 
 # Lowercased substrings that signal the user correcting the agent.
@@ -55,6 +56,43 @@ _FIX_RE = re.compile(
     r"\b(fix|fixes|fixed|fixing|revert|reverts|reverted|bugfix|hotfix)\b",
     re.IGNORECASE,
 )
+
+
+def extract_user_text(transcript_jsonl: str) -> str:
+    """Pull only the human's typed text out of a transcript JSONL tail.
+
+    Detection must see what the *user* said — not the assistant's own words
+    (which routinely quote phrases like "that's wrong") and not tool output
+    (which carries role "user" in the API but is not human input). So we keep
+    only role=="user" entries and, within them, only `text` content blocks
+    (string content or `{"type": "text"}` blocks); `tool_result` blocks are
+    dropped. Lines that don't parse as JSON (e.g. a byte-truncated first line of
+    the tail) are skipped.
+    """
+    if not transcript_jsonl:
+        return ""
+    parts: list[str] = []
+    for line in transcript_jsonl.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            obj = json.loads(line)
+        except (ValueError, TypeError):
+            continue
+        if not isinstance(obj, dict):
+            continue
+        msg = obj.get("message") if isinstance(obj.get("message"), dict) else obj
+        if msg.get("role") != "user":
+            continue
+        content = msg.get("content")
+        if isinstance(content, str):
+            parts.append(content)
+        elif isinstance(content, list):
+            for block in content:
+                if isinstance(block, dict) and block.get("type") == "text":
+                    parts.append(str(block.get("text", "")))
+    return "\n".join(parts)
 
 
 def scan_transcript(text: str) -> str | None:
@@ -110,7 +148,8 @@ def main():
     import sys
 
     subjects = [s for s in (os.environ.get("KW_GIT", "").splitlines()) if s.strip()]
-    transcript = os.environ.get("KW_TRANSCRIPT", "")
+    # KW_TRANSCRIPT is a raw transcript JSONL tail — keep only the user's text.
+    transcript = extract_user_text(os.environ.get("KW_TRANSCRIPT", ""))
     sig = detect_signal(subjects, transcript)
     if not sig:
         sys.exit(0)

@@ -4,9 +4,13 @@ tools/resolve_learnings.py mirrors tools/resolve_candidates.py: a pure classifie
 (CREATE / UPDATE / SKIP / SUPERSEDE) plus the "corrections always win" supersede
 mechanic (archive the contradicted learning, drop it from the active index).
 """
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
+
+PROJECT_ROOT = Path(__file__).parent.parent
 
 from tools.resolve_learnings import (
     CREATE,
@@ -146,6 +150,14 @@ class TestFormatBrief:
         assert "New one" in out
         assert "kw-old" in out
 
+    def test_update_branch_names_target(self):
+        rs = [{"action": UPDATE, "candidate": {"type": "insight", "headline": "Refined"},
+               "target_id": "kw-2026-06-08-refined", "superseded_ids": []}]
+        out = format_brief(rs)
+        assert "UPDATE" in out
+        assert "Refined" in out
+        assert "updates kw-2026-06-08-refined" in out
+
 
 class TestSupersedeSideEffect:
     def test_archives_old_and_drops_from_index(self, tmp_path):
@@ -184,3 +196,43 @@ class TestSupersedeSideEffect:
         root.mkdir()
         with pytest.raises(Exception):
             supersede(root, "kw-2020-01-01-ghost", "kw-new", reason="x")
+
+
+class TestCLI:
+    """The CLI is dry-run by default; --apply performs the supersede side effect."""
+
+    def _seed(self, tmp_path):
+        root = tmp_path / ".compound"
+        old = _learning("insight", "Skip retries on 500s", ["retries"], created="2026-06-01")
+        write_learning(root, old)
+        old_id = entry_from_content(old)["id"]
+        append_entry(root / "index.md", entry_from_content(old))
+        draft = tmp_path / "cand.md"
+        draft.write_text(_learning("correction", "Skip retries on 500s", ["retries"],
+                                   created="2026-07-01"))
+        return root, old_id, draft
+
+    def _run(self, draft, root, *extra):
+        return subprocess.run(
+            [sys.executable, str(PROJECT_ROOT / "tools" / "resolve_learnings.py"),
+             str(draft), "--root", str(root), *extra],
+            capture_output=True, text=True,
+        )
+
+    def test_dry_run_classifies_without_side_effects(self, tmp_path):
+        root, old_id, draft = self._seed(tmp_path)
+        proc = self._run(draft, root)
+        assert proc.returncode == 0, proc.stderr
+        assert "SUPERSEDE" in proc.stdout
+        # nothing archived, old still active in the index
+        assert (root / "insights" / f"{old_id}.md").exists()
+        assert old_id in (root / "index.md").read_text()
+
+    def test_apply_performs_supersede(self, tmp_path):
+        root, old_id, draft = self._seed(tmp_path)
+        proc = self._run(draft, root, "--apply")
+        assert proc.returncode == 0, proc.stderr
+        assert "archived" in proc.stdout
+        assert not (root / "insights" / f"{old_id}.md").exists()
+        assert old_id not in (root / "index.md").read_text()
+        assert (root / ".archive" / "insights" / f"{old_id}.md").exists()
