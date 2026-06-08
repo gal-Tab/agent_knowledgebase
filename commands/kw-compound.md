@@ -49,20 +49,31 @@ codebase). Global is a separate, explicit choice — never the default.
 
 Present the drafts to the user. **Never save without approval.**
 
-### Step 3: Check for conflicts (cheap, index-first)
+### Step 3: Check for conflicts (dedup-on-write)
 
-For each approved learning, derive its id and grep the store index(es) for a near-duplicate:
+For each approved learning, classify it against the existing store with the resolver —
+this returns **CREATE / UPDATE / SKIP / SUPERSEDE** (dry-run; no writes):
 
 ```bash
-python3 -c "from lib.learning_store import learning_id; print(learning_id('<headline>', '<today>'))"
-grep -i "<key-tag>" .compound/index.md 2>/dev/null
+python3 tools/resolve_learnings.py .compound/.drafts/<id>.md --root .compound
 ```
 
-- If a clear duplicate exists → offer to **update** the existing learning (edit its body
-  via `python3 -c "from lib.learning_store import edit_learning; ..."`) instead of creating a new one.
-- If a new **correction contradicts** an active learning → note it; the `--audit` sweep
-  (or `tools/resolve_learnings.py`, Phase 3) handles supersession. For now, file the
-  correction and flag the conflict to the user.
+Act on the resolution:
+- **CREATE** → proceed to Step 4 (new learning).
+- **SKIP** → an identical learning already exists; don't file a duplicate.
+- **UPDATE** → refine the existing learning in place instead of creating a near-dup:
+  `python3 -c "from lib.learning_store import edit_learning; ..."` then re-`append` its line.
+- **SUPERSEDE** → a new **correction contradicts** an active learning ("corrections always
+  win"). With user approval, re-run with `--apply` to stamp the old entry
+  `status: superseded`, archive it, and drop it from the index — then file the new
+  correction in Step 4:
+
+  ```bash
+  python3 tools/resolve_learnings.py .compound/.drafts/<id>.md --root .compound --apply
+  ```
+
+The resolver keys on the learning's **topic slug**, so the same lesson recaptured later
+resolves against the original rather than piling up duplicates.
 
 ### Step 4: Write + index (validated, single index owner)
 
@@ -100,24 +111,46 @@ relevant in future sessions.
 
 ## `--review`
 
-List `.compound/.drafts/*.md` (and the global drafts dir). For each, show the headline and
-type; let the user approve (→ Step 4), edit, or discard (`rm`). Drafts are excluded from the
-index, so an un-reviewed draft costs zero retrieval tokens.
+List `.compound/.drafts/*.md` (and the global drafts dir). Two kinds of draft live here:
+- **Manual** drafts you staged in Step 4.
+- **Auto-detected stubs** (`auto-<ts>-<type>.md`) staged by the `kw-capture` Stop hook when
+  it spotted a compoundable moment. These are skeletons — an empty headline/body plus a
+  `<!-- AUTO-DETECTED … -->` note recording the signal. They are **not** saved learnings.
+
+For each draft, show the headline (or the detected signal, for stubs) and type. For a stub,
+**synthesize a real headline + Learning/Context/Implication** from the session it flagged.
+Then let the user approve (→ Step 3 conflict check → Step 4), edit, or discard (`rm`). Drafts
+are excluded from the index, so an un-reviewed draft costs zero retrieval tokens.
 
 ---
 
 ## Step A: `--audit`
 
-Rebuild and sanity-check the store:
+A conservative staleness + conflict sweep. **Archive, never delete.**
 
-```bash
-python3 tools/learning_index.py rebuild --root .compound
-```
+1. **Rebuild the index** so it reflects the store on disk (drops anything already archived):
 
-Then scan for stale/conflicting entries (old + low-confidence, or a correction that
-contradicts an older learning). Recommend update / merge / archive — be conservative,
-prefer archive over delete. (Automated supersession lands in Phase 3 via
-`tools/resolve_learnings.py`; "corrections always win".)
+   ```bash
+   python3 tools/learning_index.py rebuild --root .compound
+   ```
+
+2. **Flag stale entries.** From the index, list learnings that are both **old** and
+   **low-confidence** (`UNCERTAIN`, or `INFERRED` past its usefulness). Present them; let the
+   user confirm archive (move the file under `.archive/` and `rebuild`) or keep.
+
+3. **Resolve contradictions ("corrections always win").** For each active **correction**,
+   classify it against the rest of the store to surface any active non-correction it
+   contradicts on the same topic:
+
+   ```bash
+   python3 tools/resolve_learnings.py .compound/corrections/<id>.md --root .compound
+   ```
+
+   On a `SUPERSEDE` verdict, with user approval re-run with `--apply` to archive the
+   contradicted learning + rebuild. Be conservative — confirm before applying.
+
+4. **Report.** Summarize what was rebuilt, flagged, archived, or left untouched. Never
+   bulk-delete; archival keeps the active index small without losing the audit trail.
 
 ---
 

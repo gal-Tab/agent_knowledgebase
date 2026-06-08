@@ -124,8 +124,12 @@ so it improves over time — across every project it's installed in.
 - **Capture:** run `/kw-compound` (or approve auto-detected drafts at session end).
   Nothing is ever saved without approval; preferences/behaviors are redirected to MEMORY.
 - **Token-frugal retrieval:** a compact `index.md` (one line per lesson) is grepped, never
-  loaded whole; relevant lessons surface as ≤3 headlines only when they match, with bodies
-  fetched on demand. Zero overhead when no store exists.
+  loaded whole; on a matching prompt, relevant lessons surface automatically as ≤3 headlines
+  (corrections first), with bodies fetched on demand. Zero overhead when no store exists.
+- **Recall skills:** `kw-recall` for quick interactive lookups ("have we hit this before?");
+  `kw-researcher` for a thorough, isolated-budget sweep of past lessons while planning. Both
+  are read-only and cite ids; `kb-query` also consults the lessons index when answering
+  domain questions.
 
 See `templates/learning-schema.md` for the full contract.
 
