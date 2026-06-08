@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+# LLM Wiki Agent — Compound Learnings Surface Hook (kw-*)
+# Called by UserPromptSubmit via run-hook.cmd.
+# Gated, budgeted, per-session-deduped injection of relevant past learnings.
+# Output goes to stdout and becomes additionalContext for the agent.
+#
+# Zero-overhead contract: if neither the project store (.compound/index.md) nor
+# the global store has an index, this exits 0 immediately — no python spawned.
+#
+# Usage: kw-surface <prompt>
+set -eo pipefail
+
+PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
+
+PROJECT_INDEX="$PROJECT_DIR/.compound/index.md"
+GLOBAL_HOME="${COMPOUND_KNOWLEDGE_HOME:-$HOME/.claude/compound-knowledge}"
+GLOBAL_INDEX="$GLOBAL_HOME/index.md"
+
+# Guard: nothing captured anywhere → contribute nothing, cost nothing.
+if [ ! -f "$PROJECT_INDEX" ] && [ ! -f "$GLOBAL_INDEX" ]; then
+    exit 0
+fi
+
+command -v python3 &>/dev/null || exit 0
+
+# UserPromptSubmit delivers a JSON payload on stdin ({prompt, session_id, ...}).
+# Pass it via env so the program below can own stdin (the heredoc).
+INPUT=$(cat)
+
+# One python pass: parse the payload, merge tier indexes, gate/score/cap, dedup
+# against this session's seen-file, print headlines (if any), record surfaced ids.
+KW_INPUT="$INPUT" PYTHONPATH="$PLUGIN_ROOT" python3 - "$PROJECT_DIR" <<'PY' 2>/dev/null || exit 0
+import json, os, re, sys
+from pathlib import Path
+
+from lib.learning_store import resolve_stores
+from lib.learning_surface import surface
+
+project_dir = sys.argv[1] if len(sys.argv) > 1 else os.getcwd()
+
+try:
+    payload = json.loads(os.environ.get("KW_INPUT", ""))
+except Exception:
+    sys.exit(0)
+
+prompt = payload.get("prompt") or ""
+session = payload.get("session_id") or "nosession"
+if not prompt.strip():
+    sys.exit(0)
+
+# Read the resolved store indexes (project first, then global).
+index_texts = []
+for _scope, root in resolve_stores(project_dir):
+    idx = Path(root) / "index.md"
+    if idx.exists():
+        index_texts.append(idx.read_text())
+if not index_texts:
+    sys.exit(0)
+
+# Per-session dedup: never re-inject the same learning twice in one session.
+tmp = os.environ.get("TMPDIR") or "/tmp"
+safe = re.sub(r"[^A-Za-z0-9._-]", "_", session)
+seen_file = Path(tmp) / f"kw-surface-{safe}.seen"
+seen = set()
+if seen_file.exists():
+    seen = {ln.strip() for ln in seen_file.read_text().splitlines() if ln.strip()}
+
+output, surfaced = surface(index_texts, prompt, seen_ids=seen)
+if not output:
+    sys.exit(0)
+
+print(output)
+
+# Record what we surfaced so later prompts in this session don't repeat it.
+try:
+    with seen_file.open("a") as fh:
+        for lid in surfaced:
+            fh.write(lid + "\n")
+except OSError:
+    pass
+PY
