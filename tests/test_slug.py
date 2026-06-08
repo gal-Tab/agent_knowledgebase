@@ -1,7 +1,39 @@
 """Tests for slug generation (lib/slug.py)."""
 import pytest
 
-from lib.slug import slug_source, slug_entity, slug_concept, slug_comparison
+from lib.slug import (
+    slug_source,
+    slug_entity,
+    slug_concept,
+    slug_comparison,
+    slug_learning,
+)
+
+
+class TestSlugLearning:
+    def test_basic_headline(self):
+        assert slug_learning("Add jitter to retry backoff") == "add-jitter-retry-backoff"
+
+    def test_removes_stopwords_keeps_first(self):
+        result = slug_learning("The cache must be invalidated on write")
+        assert result.split("-")[0] == "the"  # first word always kept
+        assert "to" not in result.split("-")
+        assert "be" not in result.split("-")
+
+    def test_special_characters_removed(self):
+        result = slug_learning("Run validate_wiki: before every commit!")
+        assert "_" not in result
+        assert ":" not in result
+        assert "!" not in result
+        assert result == result.lower()
+
+    def test_length_capped(self):
+        result = slug_learning("word " * 60)
+        assert len(result) <= 80
+
+    def test_empty_raises(self):
+        with pytest.raises(ValueError):
+            slug_learning("")
 
 
 class TestSlugSource:
