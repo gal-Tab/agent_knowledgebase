@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# LLM Wiki Agent — Compound Learnings Capture Hook (kw-*)
+# Called by Stop via run-hook.cmd.
+#
+# PHASE 2 STUB: wiring is in place but detection is intentionally a no-op.
+# Phase 3 implements conservative compoundable-moment detection (explicit
+# user-correction language, a bug→fix arc, a user-blessed procedure) and stages
+# at most a few drafts in .compound/.drafts/ for one-tap approval. It will NEVER
+# promote or silent-save — capture is always approval-gated via /kw-compound.
+#
+# Until then this exits 0 so the Stop hook adds zero overhead and never errors.
+#
+# Usage: kw-capture <stop>
+set -eo pipefail
+
+PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+
+# Zero-overhead guard: no project store → nothing to capture into. (Phase 3 will
+# additionally guard on the absence of any compoundable signal before drafting.)
+if [ ! -d "$PROJECT_DIR/.compound" ]; then
+    exit 0
+fi
+
+# Phase 3: detect compoundable moments here and stage drafts. No-op for now.
+exit 0

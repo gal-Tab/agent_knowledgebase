@@ -28,11 +28,16 @@ Consult the project's compiled wiki to answer domain questions with source citat
 
 2. **Read those pages** (maximum 5 per query unless the user explicitly asks for comprehensive review).
 
-3. **Synthesize your answer** from wiki content, citing sources:
+3. **Consult compound learnings (cheap, index-first).** If a learnings store exists, grep its compact index for tags matching the question — both tiers (`grep -i "<term>" .compound/index.md "$COMPOUND_KNOWLEDGE_HOME/index.md" ~/.claude/compound-knowledge/index.md 2>/dev/null`). The index is headline-only, so this is ~one grep. If a relevant **correction or playbook** headline matches, surface it; read its body (`<root>/<type-dir>/<id>.md`) **only if it sharpens the answer**. Any body you open counts toward the 5-read cap. Most queries match nothing here and pay only the grep.
+
+4. **Synthesize your answer** from wiki content, citing sources:
    - "According to [Source Title](wiki/sources/slug.md)..."
    - "The wiki notes that [Entity](wiki/entities/slug.md)..."
+   - If a learning informed the answer, cite its id + scope: "A past correction (`kw-…`, project) also warns…"
 
-4. **Distinguish wiki knowledge from general knowledge.** If you also use general knowledge beyond the wiki, say so: "The wiki says X. Additionally, from general knowledge..."
+5. **Distinguish wiki knowledge from general knowledge.** If you also use general knowledge beyond the wiki, say so: "The wiki says X. Additionally, from general knowledge..."
+
+> **Router note:** this step is a *cheap consult* of the agent's own lessons alongside a domain answer. For a question that is purely about past lessons ("what did we learn about X", "have we hit this before"), use the **`kw-recall`** skill instead — it merges both tiers and reads bodies on demand without the wiki round-trip.
 
 ## Deep Cite Mode (Source Preservation)
 
