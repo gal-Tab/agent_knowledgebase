@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# LLM Wiki Agent — Compound Learnings Surface Hook (kw-*)
+# LLM Wiki Agent — Compound Learnings Surface Hook (learn-*)
 # Called by UserPromptSubmit via run-hook.cmd.
 # Gated, budgeted, per-session-deduped injection of relevant past learnings.
 # Output goes to stdout and becomes additionalContext for the agent.

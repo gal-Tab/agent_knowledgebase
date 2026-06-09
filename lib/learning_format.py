@@ -1,4 +1,4 @@
-"""Format validation for compound learnings (the kw-* subsystem).
+"""Format validation for compound learnings (the learn-* / compound subsystem).
 
 A *learning* is the agent's own work-lesson — distinct from the source-document
 wiki pages validated by lib/page_format.py. Learnings live in the project store

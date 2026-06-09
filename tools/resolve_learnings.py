@@ -1,4 +1,4 @@
-"""Dedup-on-write resolution for compound learnings (the kw-* subsystem).
+"""Dedup-on-write resolution for compound learnings (the learn-* / compound subsystem).
 
 Mirrors tools/resolve_candidates.py for the learnings store: given a candidate
 learning and the existing (active) index entries, classify the write as

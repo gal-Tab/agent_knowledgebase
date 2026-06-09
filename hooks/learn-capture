@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# LLM Wiki Agent — Compound Learnings Capture Hook (kw-*)
+# LLM Wiki Agent — Compound Learnings Capture Hook (learn-*)
 # Called by Stop via run-hook.cmd.
 #
 # Conservative auto-capture: detect a compoundable moment (explicit user

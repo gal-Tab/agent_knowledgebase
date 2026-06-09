@@ -120,6 +120,7 @@ Commands, skills, and hooks follow one scheme so the surface stays predictable a
 - A skill's directory name, its `name:` frontmatter, and its slug are identical.
 - A hook's script filename matches the name passed in `hooks.json`; its test is `tests/test_<name_with_underscores>_hook.py`.
 - `capture` is the write verb on both surfaces: the `/learn-capture` **command** is the deliberate manual save; the `learn-capture` **hook** auto-drafts at session end — same verb, two triggers.
+- **Data IDs are out of scope.** This convention covers the *command/skill/hook surface* only. Persisted learning IDs keep their existing `kw-YYYY-MM-DD-<slug>` prefix on purpose — it's the on-disk identity format (filenames, index entries, the parser regex), and changing it would require migrating every existing store. Don't "finish the rename" on those.
 
 ## Compound Learnings
 
@@ -184,7 +185,7 @@ The plugin fires hooks on every session start and user prompt. In projects witho
 
 ## Changelog
 
-- **0.4.0** — Aligned command naming under two families: `kb-*` → `wiki-*` and `kw-*` → `learn-*` (e.g. `/kw-compound` → `/learn-capture`, `kw-researcher` → `learn-research`). Breaking change for the old slash-command names; no aliases. See **Naming conventions** above.
+- **0.4.0** — Aligned the **command/skill/hook surface** into two families: `kb-*` → `wiki-*` and `kw-*` → `learn-*` (e.g. `/kw-compound` → `/learn-capture`, `kw-researcher` → `learn-research`). Breaking change for the old slash-command names; no aliases. Persisted learning IDs (`kw-YYYY-MM-DD-<slug>`) are unchanged by design — see **Naming conventions** above.
 
 ## License
 

@@ -1,4 +1,4 @@
-"""Storage for compound learnings (the kw-* subsystem).
+"""Storage for compound learnings (the learn-* / compound subsystem).
 
 Two tiers, identical layout (this module parameterizes over `root`):
 
