@@ -1,5 +1,5 @@
 ---
-name: kw-recall
+name: learn-recall
 description: Use when the user asks what was learned before, references past mistakes/lessons/playbooks ("have we hit this before", "what did we learn about X", "lessons learned", "did I already solve this"), or when you want to consult the agent's own compound learnings before acting. Reads the compound-learnings store (project .compound/ + the global store), index-first.
 allowed-tools: Read, Glob, Grep
 ---
@@ -9,7 +9,7 @@ allowed-tools: Read, Glob, Grep
 Consult the agent's own accumulated **work-lessons** (corrections, playbooks,
 insights, patterns) to answer "have we learned this before?" and to inform how
 you approach the current task. These are the agent's lessons — **not** source
-wiki pages (`kb-query` handles those) and **not** user preferences (those live
+wiki pages (`wiki-query` handles those) and **not** user preferences (those live
 in MEMORY).
 
 This skill is **index-first and token-frugal**: read the compact index, then
@@ -27,9 +27,9 @@ answer. Never load the store wholesale.
 
 ## When NOT to Use This Skill
 
-- Domain questions about ingested sources → use `kb-query` (the wiki).
+- Domain questions about ingested sources → use `wiki-query` (the wiki).
 - User *preferences/behaviors* → those are MEMORY, not learnings.
-- Capturing a new lesson → use `/kw-compound`. This skill is read-only.
+- Capturing a new lesson → use `/learn-capture`. This skill is read-only.
 - General coding questions with no relevant captured learning.
 
 ## The Two Stores
@@ -85,7 +85,7 @@ Type codes → body directory: `C` → `corrections/`, `P` → `playbooks/`,
 - **At most 5 bodies per recall** unless the user explicitly asks for a full
   review.
 - **Read-only.** This skill never writes, edits, or archives. To capture or
-  update a lesson, route to `/kw-compound`.
+  update a lesson, route to `/learn-capture`.
 - **Cite ids + scope** for every lesson you rely on.
 - **Corrections first** — surface contradicting/cautionary lessons before
   reinforcing ones.

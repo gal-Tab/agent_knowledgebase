@@ -39,7 +39,7 @@ This overlap demonstrates cross-source linking: entities and concepts that appea
 
 1. Install the LLM Wiki Agent plugin
 2. Navigate to this directory: `cd examples/research-papers`
-3. Initialize the knowledge base: `/kb-init`
-4. Compile the sources: `/kb-compile`
+3. Initialize the knowledge base: `/wiki-init`
+4. Compile the sources: `/wiki-compile`
 
 The compiled wiki/ output is committed to this repo so you can inspect it without running the pipeline.

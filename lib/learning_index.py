@@ -1,8 +1,8 @@
 """Compact index for compound learnings — the token-frugality core.
 
 The index is one greppable line per active learning, bucketed by type with
-corrections first. Retrieval (the kw-surface hook, kw-recall, kw-researcher,
-and kb-query) greps THIS file and reads bodies only on demand — it never loads
+corrections first. Retrieval (the learn-surface hook, learn-recall, learn-research,
+and wiki-query) greps THIS file and reads bodies only on demand — it never loads
 the store wholesale. At thousands of learnings the index is still a single
 small file read by grep, not by the model.
 

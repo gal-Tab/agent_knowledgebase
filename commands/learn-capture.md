@@ -7,14 +7,14 @@ allowed-tools: Bash(python3:*), Bash(mkdir:*), Bash(rm:*), Bash(git add:*), Bash
 
 Capture durable work-lessons and file them into the learnings store for retrieval
 in future sessions. Learnings are the agent's own lessons — **not** source-document
-wiki pages (use `/kb-compile` for those) and **not** user preferences/behaviors
+wiki pages (use `/wiki-compile` for those) and **not** user preferences/behaviors
 (those go to MEMORY).
 
 The store is two-tier: the project store `.compound/` (primary, committed) and
 the opt-in global store `~/.claude/compound-knowledge/` (cross-project). Read
 `templates/learning-schema.md` for the full contract before writing.
 
-**Announce at start:** "Using kw-compound to capture session learnings into `.compound/`."
+**Announce at start:** "Using learn-capture to capture session learnings into `.compound/`."
 
 Modes (from `$ARGUMENTS`):
 - *(no args)* — **capture now** from the current session.
@@ -99,7 +99,7 @@ Do **not** hand-edit `index.md`; that tool is its sole owner.
 ```bash
 rm .compound/.drafts/<id>.md
 git add .compound
-git commit -m "[kw-compound] Filed: <headline>"
+git commit -m "[learn-capture] Filed: <headline>"
 ```
 
 ### Step 5: Confirm
@@ -113,7 +113,7 @@ relevant in future sessions.
 
 List `.compound/.drafts/*.md` (and the global drafts dir). Two kinds of draft live here:
 - **Manual** drafts you staged in Step 4.
-- **Auto-detected stubs** (`auto-<ts>-<type>.md`) staged by the `kw-capture` Stop hook when
+- **Auto-detected stubs** (`auto-<ts>-<type>.md`) staged by the `learn-capture` Stop hook when
   it spotted a compoundable moment. These are skeletons — an empty headline/body plus a
   `<!-- AUTO-DETECTED … -->` note recording the signal. They are **not** saved learnings.
 

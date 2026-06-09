@@ -1,5 +1,5 @@
 ---
-name: kb-query
+name: wiki-query
 description: Use when user asks domain questions and a wiki/ directory exists in the project, when user references "my research" or "what I've read," when user asks about topics that could be in their knowledge base, or when user asks to compare entities from ingested sources
 allowed-tools: Read, Glob, Grep, Write, Edit, Bash(git add:*), Bash(git commit:*), Bash(git status:*)
 ---
@@ -37,7 +37,7 @@ Consult the project's compiled wiki to answer domain questions with source citat
 
 5. **Distinguish wiki knowledge from general knowledge.** If you also use general knowledge beyond the wiki, say so: "The wiki says X. Additionally, from general knowledge..."
 
-> **Router note:** this step is a *cheap consult* of the agent's own lessons alongside a domain answer. For a question that is purely about past lessons ("what did we learn about X", "have we hit this before"), use the **`kw-recall`** skill instead — it merges both tiers and reads bodies on demand without the wiki round-trip.
+> **Router note:** this step is a *cheap consult* of the agent's own lessons alongside a domain answer. For a question that is purely about past lessons ("what did we learn about X", "have we hit this before"), use the **`learn-recall`** skill instead — it merges both tiers and reads bodies on demand without the wiki round-trip.
 
 ## Deep Cite Mode (Source Preservation)
 

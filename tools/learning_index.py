@@ -1,8 +1,8 @@
 """CLI for the compound-learnings index — the single owner of index.md.
 
-Only this tool edits a store's index.md. The /kw-compound command and any
+Only this tool edits a store's index.md. The /learn-capture command and any
 approval path call `append` after writing a learning; nothing else hand-edits
-the index (mirrors the manifest-owner discipline in kb-compile).
+the index (mirrors the manifest-owner discipline in wiki-compile).
 
 Usage:
     python tools/learning_index.py append <learning-file.md>

@@ -1,11 +1,11 @@
-"""Gating logic for the kw-surface UserPromptSubmit hook — token-frugality core.
+"""Gating logic for the learn-surface UserPromptSubmit hook — token-frugality core.
 
 Most prompts must inject *nothing*. This module decides, for a given prompt and
 the (already-grepped, never-loaded-wholesale) learnings index, whether any past
 learning is relevant enough to surface, and if so emits at most three
 headline-only lines under a hard token budget.
 
-The bash hook `hooks/kw-surface` is thin glue: it reads the UserPromptSubmit
+The bash hook `hooks/learn-surface` is thin glue: it reads the UserPromptSubmit
 JSON from stdin, resolves the project + global store indexes, manages the
 per-session seen-file, and calls `surface()`. All the decision logic lives here
 so it can be unit-tested (mirroring lib/hook_parser + tests/test_hook_status).
@@ -122,7 +122,7 @@ def render(entries: list[dict]) -> str:
 
     Headline-only by design: a type code + the (<=100 char) headline per line,
     one short pointer line. With at most three lines this stays near the
-    ~70-90 token budget; the body is fetched on demand via /kw-recall.
+    ~70-90 token budget; the body is fetched on demand via /learn-recall.
     """
     if not entries:
         return ""
@@ -130,7 +130,7 @@ def render(entries: list[dict]) -> str:
     for e in entries:
         code = TYPE_CODE.get(e.get("type"), "?")
         lines.append(f"- [{code}] {e.get('headline', '').strip()}")
-    lines.append("→ /kw-recall (or read the learnings index) for full text + ids.")
+    lines.append("→ /learn-recall (or read the learnings index) for full text + ids.")
     return "\n".join(lines)
 
 

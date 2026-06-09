@@ -1,6 +1,6 @@
-"""Tests for the kw-capture compoundable-moment detector (lib/learning_capture.py).
+"""Tests for the learn-capture compoundable-moment detector (lib/learning_capture.py).
 
-The Stop hook `hooks/kw-capture` is thin glue (guard on .compound/, gather recent
+The Stop hook `hooks/learn-capture` is thin glue (guard on .compound/, gather recent
 git subjects + a transcript tail, stage at most one draft stub per session). The
 conservative detection — does this session contain a compoundable moment, and of
 what type — lives here and is unit-tested, mirroring lib/learning_surface.

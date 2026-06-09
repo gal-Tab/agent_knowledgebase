@@ -1,6 +1,6 @@
 ---
-name: kw-researcher
-description: Use when planning or brainstorming a non-trivial task and you want a thorough, one-shot sweep of the agent's past learnings before committing to an approach — best run as a dispatched subagent so the scan happens in its own token budget and returns only a synthesized, cited brief. Read-only. For quick interactive lookups during a conversation, use kw-recall instead.
+name: learn-research
+description: Use when planning or brainstorming a non-trivial task and you want a thorough, one-shot sweep of the agent's past learnings before committing to an approach — best run as a dispatched subagent so the scan happens in its own token budget and returns only a synthesized, cited brief. Read-only. For quick interactive lookups during a conversation, use learn-recall instead.
 allowed-tools: Read, Glob, Grep
 ---
 
@@ -9,7 +9,7 @@ allowed-tools: Read, Glob, Grep
 Sweep the compound-learnings store at **planning time** and return a short,
 cited brief of the lessons that bear on the task at hand — past corrections to
 respect, playbooks to reuse, insights/patterns to factor in. This is the
-heavier, comprehensive counterpart to `kw-recall`.
+heavier, comprehensive counterpart to `learn-recall`.
 
 **Run this as a dispatched subagent.** The point is isolation: the subagent does
 the grepping and body-reading in *its own* context budget and hands back only the
@@ -25,9 +25,9 @@ it never writes, edits, archives, or captures.
 
 ## When NOT to Use This Skill
 
-- Quick, in-conversation recall → use **`kw-recall`** (inline, cheaper).
-- Domain questions about ingested sources → `kb-query`.
-- Capturing or updating a lesson → `/kw-compound`. This skill never writes.
+- Quick, in-conversation recall → use **`learn-recall`** (inline, cheaper).
+- Domain questions about ingested sources → `wiki-query`.
+- Capturing or updating a lesson → `/learn-capture`. This skill never writes.
 - No store exists → there is nothing to research; say so and stop.
 
 ## The Two Stores

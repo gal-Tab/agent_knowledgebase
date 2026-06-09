@@ -5,7 +5,7 @@ content is moved to `wiki/.quarantine/{category}/{slug}.md` with a sidecar
 `.errors.json` describing the failure. The original target path is left
 untouched so the existing wiki state stays consistent.
 
-`kb-status` surfaces the quarantine count at session start so users see the
+`wiki-status` surfaces the quarantine count at session start so users see the
 backlog. `recover_from_quarantine` re-validates a quarantined page after
 manual fixing and moves it back into place when valid.
 """
