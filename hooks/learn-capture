@@ -4,7 +4,7 @@
 #
 # Conservative auto-capture: detect a compoundable moment (explicit user
 # correction, a user-blessed procedure, or a bug→fix arc) and stage a SINGLE
-# draft stub in .compound/.drafts/ for later approval via `/kw-compound --review`.
+# draft stub in .compound/.drafts/ for later approval via `/learn-capture --review`.
 # It NEVER writes a real learning, never touches the index, and never promotes —
 # capture is always approval-gated. (The plan allows up to 3 drafts; one stub on
 # the first signal is the deliberately conservative choice for this phase.)
@@ -18,7 +18,7 @@
 # (lib/learning_capture.extract_user_text), so the assistant's own words and tool
 # output can't trigger a false stub.
 #
-# Usage: kw-capture <stop>
+# Usage: learn-capture <stop>
 set -eo pipefail
 
 PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(pwd)}"
@@ -47,7 +47,7 @@ print((p.get("session_id") or "nosession"), (p.get("transcript_path") or ""))
 
 TMP="${TMPDIR:-/tmp}"
 SAFE_SESSION=$(printf '%s' "$SESSION" | tr -c 'A-Za-z0-9._-' '_')
-MARKER="$TMP/kw-capture-${SAFE_SESSION}.done"
+MARKER="$TMP/learn-capture-${SAFE_SESSION}.done"
 
 # Already staged a draft this session → done (avoid re-drafting each turn).
 [ -f "$MARKER" ] && exit 0
@@ -96,7 +96,7 @@ superseded_by: null
 
 <!-- AUTO-DETECTED draft stub (signal: ${LSIGNAL}). NOT yet a saved learning.
      Evidence: ${LEVIDENCE}
-     Run /kw-compound --review to synthesize a real headline + body, classify
+     Run /learn-capture --review to synthesize a real headline + body, classify
      scope, and file it (validated, approval-gated). Discard if not worth keeping. -->
 
 ## Learning
@@ -115,4 +115,4 @@ touch "$MARKER" 2>/dev/null || true
 
 echo "=== Compound Learnings ==="
 echo "Detected a compoundable moment (${LSIGNAL}). Staged a draft stub at ${DRAFT#$PROJECT_DIR/}."
-echo "Run /kw-compound --review to approve, edit, or discard it."
+echo "Run /learn-capture --review to approve, edit, or discard it."

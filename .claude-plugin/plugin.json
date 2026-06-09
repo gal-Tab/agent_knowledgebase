@@ -1,6 +1,6 @@
 {
   "name": "llm-wiki-agent",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Knowledge base agent: compiles PDFs, markdown, and repos into a structured wiki, and compounds the agent's own work-lessons (corrections, playbooks, insights, patterns) across projects",
   "author": {
     "name": "gal-Tab"

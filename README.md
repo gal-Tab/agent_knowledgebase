@@ -14,11 +14,11 @@ claude plugin marketplace add https://github.com/gal-Tab/agent_knowledgebase
 claude plugin install llm-wiki-agent
 
 # 3. In any project, initialize a knowledge base
-/kb-init
+/wiki-init
 ```
 
 
-**Optional dependencies** (checked by `/kb-init`):
+**Optional dependencies** (checked by `/wiki-init`):
 - `pymupdf4llm` — for PDF ingestion: `pip3 install --user pymupdf4llm`
 - `repomix` — for repo ingestion: `npm install -g repomix` (npx fallback available)
 
@@ -38,7 +38,7 @@ cp ~/notes/meeting-notes.md raw/
 ```bash
 claude
 # Agent detects new files automatically on session start
-# Say "compile" or use /kb-compile to process them
+# Say "compile" or use /wiki-compile to process them
 ```
 
 ### 3. Ask questions
@@ -53,7 +53,7 @@ The agent reads the wiki index, identifies relevant pages, and synthesizes answe
 
 ## What You Get Per Project
 
-After running `/kb-init`, your project gets:
+After running `/wiki-init`, your project gets:
 
 ```
 project/
@@ -89,7 +89,7 @@ Each project has its own isolated knowledge base. The plugin provides the engine
 
 ## Customizing for Your Domain
 
-Edit `wiki-schema.md` after running `/kb-init`. The most important part is the **Domain Description** — it tells the agent what counts as "common knowledge" vs worth a dedicated page.
+Edit `wiki-schema.md` after running `/wiki-init`. The most important part is the **Domain Description** — it tells the agent what counts as "common knowledge" vs worth a dedicated page.
 
 Example for ML research:
 ```markdown
@@ -104,11 +104,22 @@ You can also customize entity types, page sections, creation thresholds, and com
 
 | Command | What it does |
 |---------|-------------|
-| `/kb-init` | Initialize a knowledge base in the current project |
-| `/kb-compile` | Compile new or updated files from raw/ into wiki pages |
-| `/kw-compound` | Capture work-lessons (corrections, playbooks, insights, patterns) into the compound-learnings store |
+| `/wiki-init` | Initialize a knowledge base in the current project |
+| `/wiki-compile` | Compile new or updated files from raw/ into wiki pages |
+| `/learn-capture` | Capture work-lessons (corrections, playbooks, insights, patterns) into the compound-learnings store |
 
-The `kb-query` skill auto-invokes when you ask domain questions — no command needed.
+The `wiki-query` skill auto-invokes when you ask domain questions — no command needed.
+
+### Naming conventions
+
+Commands, skills, and hooks follow one scheme so the surface stays predictable as it grows:
+
+- **Two families, format `<family>-<verb>`** (kebab-case, lowercase, **verb** — not a noun or agent-role):
+  - **`wiki-`** — build & query a wiki from external sources: `/wiki-init`, `/wiki-compile`, the `wiki-query` skill, the `wiki-status` hook.
+  - **`learn-`** — capture & recall the agent's *own* compound lessons: `/learn-capture`, the `learn-recall` and `learn-research` skills, the `learn-surface` and `learn-capture` hooks. Matches the `lib/learning_*.py` modules and the `.compound/` store.
+- A skill's directory name, its `name:` frontmatter, and its slug are identical.
+- A hook's script filename matches the name passed in `hooks.json`; its test is `tests/test_<name_with_underscores>_hook.py`.
+- `capture` is the write verb on both surfaces: the `/learn-capture` **command** is the deliberate manual save; the `learn-capture` **hook** auto-drafts at session end — same verb, two triggers.
 
 ## Compound Learnings
 
@@ -121,14 +132,14 @@ so it improves over time — across every project it's installed in.
   team-shareable). A lesson that genuinely generalizes can be promoted — with explicit
   approval — to the global store `~/.claude/compound-knowledge/` (override with
   `$COMPOUND_KNOWLEDGE_HOME`), which travels with you across repos.
-- **Capture:** run `/kw-compound` (or approve auto-detected drafts at session end).
+- **Capture:** run `/learn-capture` (or approve auto-detected drafts at session end).
   Nothing is ever saved without approval; preferences/behaviors are redirected to MEMORY.
 - **Token-frugal retrieval:** a compact `index.md` (one line per lesson) is grepped, never
   loaded whole; on a matching prompt, relevant lessons surface automatically as ≤3 headlines
   (corrections first), with bodies fetched on demand. Zero overhead when no store exists.
-- **Recall skills:** `kw-recall` for quick interactive lookups ("have we hit this before?");
-  `kw-researcher` for a thorough, isolated-budget sweep of past lessons while planning. Both
-  are read-only and cite ids; `kb-query` also consults the lessons index when answering
+- **Recall skills:** `learn-recall` for quick interactive lookups ("have we hit this before?");
+  `learn-research` for a thorough, isolated-budget sweep of past lessons while planning. Both
+  are read-only and cite ids; `wiki-query` also consults the lessons index when answering
   domain questions.
 
 See `templates/learning-schema.md` for the full contract.
@@ -149,10 +160,10 @@ Adding a format = one extraction script + one line in the compile command.
 
 ```
 Plugin (shared)          →  Project (per-project)
-  hooks/kb-status             raw/ + wiki/ + manifest
-  commands/kb-compile         wiki-schema.md
-  skills/kb-query             HANDOFF.md
-  tools/extract-*             tools/ (copied by kb-init)
+  hooks/wiki-status             raw/ + wiki/ + manifest
+  commands/wiki-compile         wiki-schema.md
+  skills/wiki-query             HANDOFF.md
+  tools/extract-*             tools/ (copied by wiki-init)
 ```
 
 The plugin fires hooks on every session start and user prompt. In projects without a KB (no `raw/` directory), the hook exits silently with zero overhead.
@@ -170,6 +181,10 @@ The plugin fires hooks on every session start and user prompt. In projects witho
 - [Karpathy's LLM Knowledge Bases](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f)
 - [Cole Medin](https://github.com/cole-medin) — git-as-memory
 - [CandleKeep](https://getcandlekeep.com) — auto-detection model
+
+## Changelog
+
+- **0.4.0** — Aligned command naming under two families: `kb-*` → `wiki-*` and `kw-*` → `learn-*` (e.g. `/kw-compound` → `/learn-capture`, `kw-researcher` → `learn-research`). Breaking change for the old slash-command names; no aliases. See **Naming conventions** above.
 
 ## License
 

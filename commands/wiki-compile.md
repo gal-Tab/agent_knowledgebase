@@ -521,7 +521,7 @@ python3 tools/generate-graph.py wiki wiki/graph.mmd
 
 This reads page frontmatter (key_entities, key_concepts, source_refs) and produces a visual relationship map. The graph is regenerated on every compile run.
 
-If `tools/generate-graph.py` is not available (e.g., not copied during kb-init), skip this step silently.
+If `tools/generate-graph.py` is not available (e.g., not copied during wiki-init), skip this step silently.
 
 ---
 
@@ -537,7 +537,7 @@ python3 tools/validate_wiki.py $(git diff --name-only --diff-filter=ACM HEAD -- 
 ```
 
 If exit code is non-zero, **block the commit**. Report the validator output to the user and stop. Do not stage, do not commit. The user must either:
-  - Manually fix the malformed pages and re-run kb-compile (at which point validation will pass)
+  - Manually fix the malformed pages and re-run wiki-compile (at which point validation will pass)
   - Move the offending pages to quarantine via `python3 tools/quarantine_page.py move ...`
 
 If the wiki has any quarantined pages, surface them as a warning (do NOT block):

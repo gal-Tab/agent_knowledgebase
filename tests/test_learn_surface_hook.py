@@ -1,6 +1,6 @@
-"""Tests for the kw-surface gating logic (lib/learning_surface.py).
+"""Tests for the learn-surface gating logic (lib/learning_surface.py).
 
-The bash hook `hooks/kw-surface` is thin glue (read stdin JSON, resolve stores,
+The bash hook `hooks/learn-surface` is thin glue (read stdin JSON, resolve stores,
 manage the per-session seen-file, print). The decision logic that matters —
 tokenize the prompt, score against the index tag column, gate, prioritise, cap —
 lives in lib/learning_surface and is tested here, mirroring how

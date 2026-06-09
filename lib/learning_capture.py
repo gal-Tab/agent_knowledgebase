@@ -1,9 +1,9 @@
-"""Compoundable-moment detection for the kw-capture Stop hook.
+"""Compoundable-moment detection for the learn-capture Stop hook.
 
 A Stop hook fires at the end of *every* turn, so detection must be cheap and
 conservative — most turns contain no durable lesson and must yield nothing. When
 a signal *is* present, the hook stages a single draft stub for later approval via
-`/kw-compound --review`; it never writes a real learning and never touches the
+`/learn-capture --review`; it never writes a real learning and never touches the
 index. (Approval-gated capture is the locked design.)
 
 Signals, strongest first:

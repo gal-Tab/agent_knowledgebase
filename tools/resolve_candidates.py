@@ -1,4 +1,4 @@
-"""Batch resolution candidate collector for kb-compile.
+"""Batch resolution candidate collector for wiki-compile.
 
 Parses Extracted References from source pages, deduplicates by slug,
 classifies as CREATE/UPDATE/SKIP, and outputs a markdown resolution brief.

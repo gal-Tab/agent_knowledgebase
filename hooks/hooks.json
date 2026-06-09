@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" kb-status session-start"
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" wiki-status session-start"
           }
         ]
       }
@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" kb-status prompt"
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" wiki-status prompt"
           }
         ]
       },
@@ -23,7 +23,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" kw-surface prompt"
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" learn-surface prompt"
           }
         ]
       }
@@ -33,7 +33,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" kw-capture stop"
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" learn-capture stop"
           }
         ]
       }

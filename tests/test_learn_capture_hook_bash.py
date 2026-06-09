@@ -1,6 +1,6 @@
-"""End-to-end tests for the kw-capture Stop hook *script* (hooks/kw-capture).
+"""End-to-end tests for the learn-capture Stop hook *script* (hooks/learn-capture).
 
-The pure detector is covered by tests/test_kw_capture_hook.py; this exercises the
+The pure detector is covered by tests/test_learn_capture_hook.py; this exercises the
 bash glue itself — the opt-in guard, the once-per-session throttle, draft staging,
 and (via the real script) that only the user's transcript text drives detection.
 Mirrors the subprocess style of tests/test_learning_write.py.
@@ -10,7 +10,7 @@ import subprocess
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).parent.parent
-HOOK = PROJECT_ROOT / "hooks" / "kw-capture"
+HOOK = PROJECT_ROOT / "hooks" / "learn-capture"
 
 
 def _jsonl(*entries) -> str:
@@ -59,7 +59,7 @@ def test_correction_stages_one_stub(tmp_path):
     drafts = _drafts(tmp_path)
     assert len(drafts) == 1
     assert "type: correction" in drafts[0].read_text()
-    assert "/kw-compound --review" in proc.stdout
+    assert "/learn-capture --review" in proc.stdout
 
 
 def test_throttled_to_one_per_session(tmp_path):

@@ -73,11 +73,11 @@
   <!-- SETUP COLUMN                                -->
   <!-- ═══════════════════════════════════════════ -->
 
-  <!-- S1: /kb-init -->
+  <!-- S1: /wiki-init -->
   <rect x="60" y="165" width="200" height="60" rx="8" fill="#FFFFFF" stroke="#6366F1" stroke-width="2" filter="url(#shadow)"/>
   <rect x="60" y="165" width="54" height="20" rx="4" fill="#6366F1"/>
   <text x="87" y="179" text-anchor="middle" class="badge">USER</text>
-  <text x="160" y="199" text-anchor="middle" class="step-label">/kb-init</text>
+  <text x="160" y="199" text-anchor="middle" class="step-label">/wiki-init</text>
   <text x="160" y="215" text-anchor="middle" class="step-desc">creates scaffold + tools</text>
 
   <!-- Arrow S1 → S2 -->
@@ -118,11 +118,11 @@
   <!-- Arrow B2 → B3 (back up to user) -->
   <path d="M 560 417 L 600 417 L 600 200 L 620 200" stroke="#F59E0B" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
 
-  <!-- B3: /kb-compile -->
+  <!-- B3: /wiki-compile -->
   <rect x="620" y="165" width="180" height="60" rx="8" fill="#FFFFFF" stroke="#3B82F6" stroke-width="2" filter="url(#shadow)"/>
   <rect x="620" y="165" width="54" height="20" rx="4" fill="#3B82F6"/>
   <text x="647" y="179" text-anchor="middle" class="badge">USER</text>
-  <text x="710" y="199" text-anchor="middle" class="step-label">/kb-compile</text>
+  <text x="710" y="199" text-anchor="middle" class="step-label">/wiki-compile</text>
   <text x="710" y="215" text-anchor="middle" class="step-desc">triggers the pipeline</text>
 
   <!-- Arrow B3 → B4 (down to agent lane) -->
@@ -174,11 +174,11 @@
   <line x1="1020" y1="225" x2="1020" y2="540" stroke="#10B981" stroke-width="1.5" marker-end="url(#arrow-green)"/>
   <text x="1030" y="390" class="note">auto-triggered</text>
 
-  <!-- Q2: kb-query reads wiki -->
+  <!-- Q2: wiki-query reads wiki -->
   <rect x="900" y="545" width="240" height="65" rx="8" fill="#F0FDF4" stroke="#10B981" stroke-width="2" filter="url(#shadow)"/>
   <rect x="900" y="545" width="54" height="20" rx="4" fill="#10B981"/>
   <text x="927" y="559" text-anchor="middle" class="badge">AUTO</text>
-  <text x="1020" y="580" text-anchor="middle" class="step-label">kb-query reads wiki</text>
+  <text x="1020" y="580" text-anchor="middle" class="step-label">wiki-query reads wiki</text>
   <text x="1020" y="596" text-anchor="middle" class="step-desc">index lookup, reads up to 5 pages</text>
 
   <!-- Arrow Q2 → Q3 -->

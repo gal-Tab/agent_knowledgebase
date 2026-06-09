@@ -77,7 +77,7 @@ def _add_wiki_root(p: argparse.ArgumentParser) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Quarantine operations for the kb-compile pipeline.")
+    parser = argparse.ArgumentParser(description="Quarantine operations for the wiki-compile pipeline.")
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     p_move = sub.add_parser("move")

@@ -1,13 +1,13 @@
-"""Parser for kb-status hook output.
+"""Parser for wiki-status hook output.
 
-Parses the structured output of the kb-status hook into a dict
+Parses the structured output of the wiki-status hook into a dict
 for programmatic consumption.
 """
 import re
 
 
 def parse_hook_output(output_text: str) -> dict:
-    """Parse kb-status hook output into structured data.
+    """Parse wiki-status hook output into structured data.
 
     Returns dict with:
         - has_header: bool (whether output contains '=== KB Status ===')

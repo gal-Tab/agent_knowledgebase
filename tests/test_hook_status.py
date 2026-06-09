@@ -19,7 +19,7 @@ New files in raw/: paper.pdf, notes.md
 Updated files: old-paper.pdf
 Last session: abc1234 [session] End: compiled 2 sources | wiki: 35pp
 Wiki: 35 pages (15s/12e/6c/2x)
-ACTION: Compile these files now. Use /kb-compile or say "compile the new files"."""
+ACTION: Compile these files now. Use /wiki-compile or say "compile the new files"."""
         result = parse_hook_output(output)
 
         assert result["has_header"] is True
@@ -87,7 +87,7 @@ Wiki: 0 pages (0s/0e/0c/0x)"""
     def test_action_line_captured(self):
         output = """=== KB Status ===
 New files in raw/: paper.pdf
-ACTION: Compile these files now. Use /kb-compile or say "compile the new files"."""
+ACTION: Compile these files now. Use /wiki-compile or say "compile the new files"."""
         result = parse_hook_output(output)
 
         assert result["action"] is not None

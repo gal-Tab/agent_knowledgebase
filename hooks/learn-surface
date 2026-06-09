@@ -7,7 +7,7 @@
 # Zero-overhead contract: if neither the project store (.compound/index.md) nor
 # the global store has an index, this exits 0 immediately — no python spawned.
 #
-# Usage: kw-surface <prompt>
+# Usage: learn-surface <prompt>
 set -eo pipefail
 
 PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(pwd)}"
@@ -61,7 +61,7 @@ if not index_texts:
 # Per-session dedup: never re-inject the same learning twice in one session.
 tmp = os.environ.get("TMPDIR") or "/tmp"
 safe = re.sub(r"[^A-Za-z0-9._-]", "_", session)
-seen_file = Path(tmp) / f"kw-surface-{safe}.seen"
+seen_file = Path(tmp) / f"learn-surface-{safe}.seen"
 seen = set()
 if seen_file.exists():
     seen = {ln.strip() for ln in seen_file.read_text().splitlines() if ln.strip()}

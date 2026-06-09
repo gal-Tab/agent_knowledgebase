@@ -4,7 +4,7 @@
 # Scans raw/ for unprocessed files, reads git log, reports wiki stats.
 # Output goes to stdout and becomes additionalContext for the agent.
 #
-# Usage: kb-status <session-start|prompt>
+# Usage: wiki-status <session-start|prompt>
 #   session-start: full output with HANDOFF.md and compile directive
 #   prompt:        minimal output, only reports if there are new/updated files
 set -eo pipefail
@@ -134,9 +134,9 @@ fi
 
 if [ "$has_work" = true ]; then
     if [ "$MODE" = "session-start" ]; then
-        echo "ACTION: Compile these files now. Use /kb-compile or say \"compile the new files\"."
+        echo "ACTION: Compile these files now. Use /wiki-compile or say \"compile the new files\"."
     else
-        echo "New files are waiting. Ask the user if they want to compile now, or use /kb-compile."
+        echo "New files are waiting. Ask the user if they want to compile now, or use /wiki-compile."
     fi
 fi
 
