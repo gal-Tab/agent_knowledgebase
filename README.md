@@ -1,4 +1,18 @@
-# LLM Wiki Agent
+# LLM Wiki Agent — Moved
+
+> **This repository has moved.** The plugin now lives at
+> [`gal-Tab/sir_albert/plugins/kb`](https://github.com/gal-Tab/sir_albert/tree/main/plugins/kb)
+> as the `kb` plugin inside the `sir_albert` monorepo.
+>
+> To install from the new location:
+> ```bash
+> claude plugin marketplace add https://github.com/gal-Tab/sir_albert
+> claude plugin install kb@sir-albert
+> ```
+>
+> This repository is kept for history and is no longer maintained.
+
+---
 
 A Claude Code plugin that gives your agent persistent, structured memory. Drop PDFs, markdown files, or git repos into a folder — the agent extracts, compiles, and maintains a structured wiki. Ask domain questions and get answers grounded in your sources, with cross-references and citations.
 
